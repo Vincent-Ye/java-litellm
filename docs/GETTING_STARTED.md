@@ -120,9 +120,12 @@ model_list:
       api_key: os.environ/ANTHROPIC_API_KEY
 litellm_settings:
   cache: true
+  redis_url: os.environ/REDIS_URL    # 可选；多副本部署时启用 Redis 后端
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
 ```
+
+> **单副本 vs 多副本**：默认无 `redis_url` 时，缓存/限流/Router 状态走进程内（Caffeine + 内存窗口），适合单副本部署。设了 `redis_url` 后，三者全部切到 Redis（缓存 `SETEX` + Lua 原子滑动窗口），多副本之间计数共享、冷却即时同步。
 
 ### 签发虚拟 Key
 

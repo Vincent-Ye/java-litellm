@@ -55,7 +55,7 @@ general_settings:
 
 1. **供应商范围**：v1.0 聚焦 6 家 Tier-1 供应商（见 [CAPABILITIES.md](CAPABILITIES.md)），不是 LiteLLM 的 100+。其余通过 SPI 由社区扩展。
 2. **企业版功能不在范围内**：SSO/SAML、审计日志、JWT 团队鉴权、企业级 Guardrails 不实现（这些在 LiteLLM 中也非纯开源部分）。
-3. **分布式后端**：限流/缓存当前为单副本进程内实现（多副本场景的 Redis 后端在路线图 M5 收尾项中，接口已就绪）。单副本部署计数精确；多副本下计数独立。
+3. **分布式后端**：默认进程内实现；在 `config.yaml` 的 `litellm_settings.redis_url` 或 `general_settings.redis_url` 设值后，缓存（Redis SETEX）、限流（Lua 原子滑动窗口）、Router 冷却与时延窗口都切到 Redis，多副本部署计数精确（误差由 Redis 一致性决定，非进程独立）。
 4. **Token 计数**：OpenAI 系用 jtokkit 精确计数；非 OpenAI 系优先用响应 `usage` 字段，预估场景退化为近似——与 LiteLLM `token_counter` 行为一致。
 5. **价格表**：复用 LiteLLM 的 `model_prices_and_context_window.json`，内置快照打进 jar；未知模型的成本返回 `null` 而非 0，便于区分「免费」与「未知」。
 6. **回调生态**：v1.0 内置日志/Prometheus/OTel；Langfuse、自定义 Webhook 等在 v1.x。

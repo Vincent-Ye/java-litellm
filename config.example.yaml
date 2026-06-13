@@ -9,5 +9,11 @@ model_list:
       model: anthropic/claude-sonnet-4-6
       api_key: os.environ/ANTHROPIC_API_KEY
 
+litellm_settings:
+  # cache: true                        # 启用缓存
+  # cache_params:
+  #   ttl: 300
+  # redis_url: redis://redis:6379      # 多副本部署启用 Redis 后端
+
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY

@@ -13,11 +13,15 @@ services:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-master-change-me}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # Uncomment after setting `redis_url: redis://redis:6379` in config.yaml
+      # SPRING_REDIS_URL: redis://redis:6379
     volumes:
       - ./config.yaml:/app/config.yaml:ro
     depends_on:
       postgres:
         condition: service_healthy
+      # redis:
+      #   condition: service_healthy
 
   postgres:
     image: postgres:16-alpine
@@ -32,6 +36,15 @@ services:
       retries: 10
     volumes:
       - pgdata:/var/lib/postgresql/data
+
+  # Uncomment for multi-replica deployments — see config.yaml's redis_url.
+  # redis:
+  #   image: redis:7-alpine
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 3s
+  #     timeout: 3s
+  #     retries: 10
 
 volumes:
   pgdata:

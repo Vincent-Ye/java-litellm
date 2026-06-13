@@ -2,7 +2,7 @@
 
 用 Java 重写 [LiteLLM](https://github.com/BerriAI/litellm) 的开源部分：统一 LLM SDK + Router + OpenAI 兼容 Proxy 网关。
 
-**当前阶段：M5（第三批）完成——动态模型管理：`/model/new|info|delete` 热生效（Router 改为可变，volatile groups + 无锁读），新增模型立即可路由、删除即失效，并持久化到 `model_deployments` 表、重启自动恢复。叠加前两批的团队/用户层级、缓存、Key/团队限流、Prometheus、`/spend` 报表。下一步：M5 收尾（Redis 分布式限流/缓存）后进入 M6 发布加固。**
+**当前阶段：M5 全部完成 + M6 进行中——加入 Redis 分布式后端：缓存（`SETEX`）、限流（Lua 原子滑动窗口）、Router 状态（冷却 + 时延/TPM/RPM 窗口）全部支持 Redis，`config.yaml` 设 `redis_url` 即切换、多副本部署计数共享；本机无 Docker，Testcontainers 集成测试由 CI 验证。叠加：缓存/Key+团队限流/Prometheus/团队用户层级/动态模型/`/spend` 报表/getting-started + 迁移文档/Maven 发布 profile。下一步：M6 收尾（安全审查、实际 Maven Central 发布需用户的 Sonatype 凭证）。**
 
 ```bash
 # 启动网关（需 Docker）

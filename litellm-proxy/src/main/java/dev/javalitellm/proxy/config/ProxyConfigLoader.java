@@ -35,7 +35,11 @@ import java.util.List;
 public final class ProxyConfigLoader {
 
     public record LoadedConfig(
-            List<Deployment> deployments, String masterKey, boolean cacheEnabled, int cacheTtlSeconds) {}
+            List<Deployment> deployments,
+            String masterKey,
+            boolean cacheEnabled,
+            int cacheTtlSeconds,
+            String redisUrl) {}
 
     private final ObjectMapper yaml = new ObjectMapper(new YAMLFactory());
 
@@ -64,7 +68,11 @@ public final class ProxyConfigLoader {
         JsonNode litellmSettings = root.path("litellm_settings");
         boolean cacheEnabled = litellmSettings.path("cache").asBoolean(false);
         int cacheTtl = litellmSettings.path("cache_params").path("ttl").asInt(300);
-        return new LoadedConfig(deployments, masterKey, cacheEnabled, cacheTtl);
+        // Either litellm_settings.redis_url or general_settings.redis_url enables distributed backends.
+        String redisUrl = resolve(litellmSettings, "redis_url")
+                .or(() -> resolve(root.path("general_settings"), "redis_url"))
+                .orElse(null);
+        return new LoadedConfig(deployments, masterKey, cacheEnabled, cacheTtl, redisUrl);
     }
 
     /**
