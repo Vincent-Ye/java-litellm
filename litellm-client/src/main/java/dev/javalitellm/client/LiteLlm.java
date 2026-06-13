@@ -62,7 +62,7 @@ public final class LiteLlm {
     }
 
     /** Hooks run on virtual threads; a failing hook is logged and never affects the request path. */
-    private void notify(java.util.function.Consumer<LlmCallback> invocation) {
+    private void fireCallbacks(java.util.function.Consumer<LlmCallback> invocation) {
         for (LlmCallback callback : callbacks) {
             executor.submit(() -> {
                 try {
@@ -82,15 +82,15 @@ public final class LiteLlm {
         Route route = resolve(request.model());
         ChatRequest bare = request.toBuilder().model(route.id.model()).build();
         CallContext ctx = CallContext.create(route.id.provider(), request);
-        notify(cb -> cb.onRequest(ctx));
+        fireCallbacks(cb -> cb.onRequest(ctx));
         try {
             ChatResponse response = withCost(route, withRetries(() -> route.provider.chat(bare, route.config)));
             Duration elapsed = Duration.between(ctx.startedAt(), java.time.Instant.now());
-            notify(cb -> cb.onSuccess(ctx, response, elapsed));
+            fireCallbacks(cb -> cb.onSuccess(ctx, response, elapsed));
             return response;
         } catch (LiteLlmException e) {
             Duration elapsed = Duration.between(ctx.startedAt(), java.time.Instant.now());
-            notify(cb -> cb.onFailure(ctx, e, elapsed));
+            fireCallbacks(cb -> cb.onFailure(ctx, e, elapsed));
             throw e;
         }
     }
@@ -103,7 +103,31 @@ public final class LiteLlm {
     public void chatStream(ChatRequest request, StreamHandler handler) {
         Route route = resolve(request.model());
         ChatRequest bare = request.toBuilder().model(route.id.model()).build();
-        route.provider.chatStream(bare, route.config, handler);
+        CallContext ctx = CallContext.create(route.id.provider(), request);
+        fireCallbacks(cb -> cb.onRequest(ctx));
+        ChunkAggregator aggregator = new ChunkAggregator();
+        route.provider.chatStream(bare, route.config, new StreamHandler() {
+            @Override
+            public void onChunk(ChatChunk chunk) {
+                aggregator.add(chunk);
+                handler.onChunk(chunk);
+            }
+
+            @Override
+            public void onComplete() {
+                ChatResponse aggregated = withCost(route, aggregator.toResponse());
+                Duration elapsed = Duration.between(ctx.startedAt(), java.time.Instant.now());
+                fireCallbacks(cb -> cb.onStreamComplete(ctx, aggregated, elapsed));
+                handler.onComplete();
+            }
+
+            @Override
+            public void onError(LiteLlmException e) {
+                Duration elapsed = Duration.between(ctx.startedAt(), java.time.Instant.now());
+                fireCallbacks(cb -> cb.onFailure(ctx, e, elapsed));
+                handler.onError(e);
+            }
+        });
     }
 
     /**

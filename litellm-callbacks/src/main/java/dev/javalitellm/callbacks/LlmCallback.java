@@ -16,4 +16,7 @@ public interface LlmCallback {
     default void onSuccess(CallContext ctx, ChatResponse response, Duration elapsed) {}
 
     default void onFailure(CallContext ctx, LiteLlmException error, Duration elapsed) {}
+
+    /** Called once per streamed call with all chunks aggregated into a complete response. */
+    default void onStreamComplete(CallContext ctx, ChatResponse aggregated, Duration elapsed) {}
 }

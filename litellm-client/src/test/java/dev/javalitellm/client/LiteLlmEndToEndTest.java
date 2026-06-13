@@ -140,6 +140,50 @@ class LiteLlmEndToEndTest {
     }
 
     @Test
+    void streamCallbackReceivesAggregatedResponseWithCost(WireMockRuntimeInfo wm) throws Exception {
+        String sse =
+                """
+                data: {"id":"c1","model":"gpt-4o","choices":[{"index":0,"delta":{"content":"He"},"finish_reason":null}]}
+
+                data: {"id":"c1","model":"gpt-4o","choices":[{"index":0,"delta":{"content":"y"},"finish_reason":"stop"}]}
+
+                data: {"id":"c1","model":"gpt-4o","choices":[],"usage":{"prompt_tokens":3,"completion_tokens":2}}
+
+                data: [DONE]
+
+                """;
+        wm.getWireMock()
+                .register(post(urlEqualTo("/v1/chat/completions"))
+                        .willReturn(aResponse()
+                                .withStatus(200)
+                                .withHeader("Content-Type", "text/event-stream")
+                                .withBody(sse)));
+
+        var aggregated = new java.util.concurrent.atomic.AtomicReference<ChatResponse>();
+        var latch = new java.util.concurrent.CountDownLatch(1);
+        LiteLlm client = LiteLlm.builder()
+                .apiKey("openai", "sk-test")
+                .apiBase("openai", wm.getHttpBaseUrl() + "/v1")
+                .callback(new dev.javalitellm.callbacks.LlmCallback() {
+                    @Override
+                    public void onStreamComplete(
+                            dev.javalitellm.callbacks.CallContext ctx, ChatResponse response, Duration elapsed) {
+                        aggregated.set(response);
+                        latch.countDown();
+                    }
+                })
+                .build();
+
+        client.chatStream(request()).forEach(chunk -> {});
+
+        assertThat(latch.await(5, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+        assertThat(aggregated.get().firstText()).isEqualTo("Hey");
+        assertThat(aggregated.get().choices().getFirst().finishReason()).isEqualTo("stop");
+        assertThat(aggregated.get().usage().totalTokens()).isEqualTo(5);
+        assertThat(aggregated.get().costUsd()).isNotNull();
+    }
+
+    @Test
     void unknownProviderFailsFast(WireMockRuntimeInfo wm) {
         assertThatThrownBy(() -> client(wm)
                         .chat(ChatRequest.builder()

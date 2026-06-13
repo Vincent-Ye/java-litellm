@@ -18,5 +18,8 @@
   <modules>
     <module>provider-openai</module>
     <module>provider-anthropic</module>
+    <module>provider-azure-openai</module>
+    <module>provider-mistral</module>
+    <module>provider-gemini</module>
   </modules>
 </project>

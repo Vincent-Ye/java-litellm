@@ -8,7 +8,8 @@ import java.util.Map;
  * Per-call provider settings. {@code apiBase} overrides the provider default endpoint — this is how
  * OpenAI-compatible providers (DeepSeek, Groq, Ollama, vLLM, ...) are reached through provider-openai.
  */
-public record ProviderConfig(String apiKey, String apiBase, Duration timeout, Map<String, String> extraHeaders) {
+public record ProviderConfig(
+        String apiKey, String apiBase, String apiVersion, Duration timeout, Map<String, String> extraHeaders) {
 
     public static final Duration DEFAULT_TIMEOUT = Duration.ofMinutes(10);
 
@@ -24,6 +25,7 @@ public record ProviderConfig(String apiKey, String apiBase, Duration timeout, Ma
     public static final class Builder {
         private String apiKey;
         private String apiBase;
+        private String apiVersion;
         private Duration timeout;
         private final Map<String, String> extraHeaders = new LinkedHashMap<>();
 
@@ -34,6 +36,12 @@ public record ProviderConfig(String apiKey, String apiBase, Duration timeout, Ma
 
         public Builder apiBase(String apiBase) {
             this.apiBase = apiBase;
+            return this;
+        }
+
+        /** Provider-specific API version, e.g. Azure OpenAI's {@code api-version} query parameter. */
+        public Builder apiVersion(String apiVersion) {
+            this.apiVersion = apiVersion;
             return this;
         }
 
@@ -48,7 +56,7 @@ public record ProviderConfig(String apiKey, String apiBase, Duration timeout, Ma
         }
 
         public ProviderConfig build() {
-            return new ProviderConfig(apiKey, apiBase, timeout, extraHeaders);
+            return new ProviderConfig(apiKey, apiBase, apiVersion, timeout, extraHeaders);
         }
     }
 }
