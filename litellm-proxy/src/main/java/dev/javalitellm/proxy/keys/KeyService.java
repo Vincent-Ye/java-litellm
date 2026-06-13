@@ -32,18 +32,27 @@ public class KeyService {
     }
 
     /** Returns the plaintext key — the only time it is ever available. */
-    public String generate(String alias, List<String> models, BigDecimal maxBudget, Duration validFor) {
+    public String generate(
+            String alias,
+            List<String> models,
+            BigDecimal maxBudget,
+            Duration validFor,
+            Integer tpmLimit,
+            Integer rpmLimit) {
         byte[] random = new byte[24];
         RANDOM.nextBytes(random);
         String token = "sk-" + Base64.getUrlEncoder().withoutPadding().encodeToString(random);
         Instant expiresAt = validFor == null ? null : Instant.now().plus(validFor);
         jdbc.update(
-                "INSERT INTO virtual_keys (token_hash, key_alias, models, max_budget, expires_at) VALUES (?,?,?,?,?)",
+                "INSERT INTO virtual_keys (token_hash, key_alias, models, max_budget, expires_at, tpm_limit,"
+                        + " rpm_limit) VALUES (?,?,?,?,?,?,?)",
                 hash(token),
                 alias,
                 models == null || models.isEmpty() ? null : String.join(",", models),
                 maxBudget,
-                expiresAt == null ? null : Timestamp.from(expiresAt));
+                expiresAt == null ? null : Timestamp.from(expiresAt),
+                tpmLimit,
+                rpmLimit);
         return token;
     }
 
@@ -53,7 +62,7 @@ public class KeyService {
 
     public Optional<VirtualKey> findByHash(String tokenHash) {
         List<VirtualKey> rows = jdbc.query(
-                "SELECT token_hash, key_alias, models, max_budget, spend, expires_at, blocked"
+                "SELECT token_hash, key_alias, models, max_budget, spend, expires_at, blocked, tpm_limit, rpm_limit"
                         + " FROM virtual_keys WHERE token_hash = ?",
                 (rs, i) -> new VirtualKey(
                         rs.getString("token_hash"),
@@ -64,7 +73,9 @@ public class KeyService {
                         rs.getTimestamp("expires_at") == null
                                 ? null
                                 : rs.getTimestamp("expires_at").toInstant(),
-                        rs.getBoolean("blocked")),
+                        rs.getBoolean("blocked"),
+                        rs.getObject("tpm_limit", Integer.class),
+                        rs.getObject("rpm_limit", Integer.class)),
                 tokenHash);
         return rows.stream().findFirst();
     }

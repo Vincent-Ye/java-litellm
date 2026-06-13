@@ -39,7 +39,13 @@ public class KeyController {
         Duration validFor =
                 req.hasNonNull("duration") ? parseDuration(req.get("duration").asText()) : null;
 
-        String token = keys.generate(req.path("key_alias").asText(null), models, maxBudget, validFor);
+        String token = keys.generate(
+                req.path("key_alias").asText(null),
+                models,
+                maxBudget,
+                validFor,
+                req.hasNonNull("tpm_limit") ? req.get("tpm_limit").asInt() : null,
+                req.hasNonNull("rpm_limit") ? req.get("rpm_limit").asInt() : null);
 
         ObjectNode response = mapper.createObjectNode();
         response.put("key", token);
@@ -104,6 +110,8 @@ public class KeyController {
         node.put("spend", vk.spend() == null ? 0d : vk.spend().doubleValue());
         node.put("expires_at", vk.expiresAt() == null ? null : vk.expiresAt().toString());
         node.put("blocked", vk.blocked());
+        node.put("tpm_limit", vk.tpmLimit());
+        node.put("rpm_limit", vk.rpmLimit());
         return node;
     }
 

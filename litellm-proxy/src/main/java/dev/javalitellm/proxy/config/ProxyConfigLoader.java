@@ -34,7 +34,8 @@ import java.util.List;
  */
 public final class ProxyConfigLoader {
 
-    public record LoadedConfig(List<Deployment> deployments, String masterKey) {}
+    public record LoadedConfig(
+            List<Deployment> deployments, String masterKey, boolean cacheEnabled, int cacheTtlSeconds) {}
 
     private final ObjectMapper yaml = new ObjectMapper(new YAMLFactory());
 
@@ -77,7 +78,10 @@ public final class ProxyConfigLoader {
         }
 
         String masterKey = resolve(root.path("general_settings"), "master_key").orElse(null);
-        return new LoadedConfig(deployments, masterKey);
+        JsonNode litellmSettings = root.path("litellm_settings");
+        boolean cacheEnabled = litellmSettings.path("cache").asBoolean(false);
+        int cacheTtl = litellmSettings.path("cache_params").path("ttl").asInt(300);
+        return new LoadedConfig(deployments, masterKey, cacheEnabled, cacheTtl);
     }
 
     private java.util.Optional<String> resolve(JsonNode node, String field) {

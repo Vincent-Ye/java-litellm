@@ -33,7 +33,7 @@ public class AuthFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return !(path.startsWith("/v1/") || path.startsWith("/key/"));
+        return !(path.startsWith("/v1/") || path.startsWith("/key/") || path.startsWith("/spend/"));
     }
 
     @Override
@@ -51,8 +51,9 @@ public class AuthFilter extends OncePerRequestFilter {
             chain.doFilter(request, response);
             return;
         }
-        if (request.getRequestURI().startsWith("/key/")) {
-            reject(response, 403, "key management requires the master key");
+        String path = request.getRequestURI();
+        if (path.startsWith("/key/") || path.startsWith("/spend/")) {
+            reject(response, 403, "admin endpoints require the master key");
             return;
         }
 

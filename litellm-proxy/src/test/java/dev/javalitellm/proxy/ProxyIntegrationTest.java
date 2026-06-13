@@ -95,6 +95,10 @@ class ProxyIntegrationTest {
                           model: openai/gpt-4o-mini
                           api_key: sk-upstream
                           api_base: %s/v1
+                    litellm_settings:
+                      cache: true
+                      cache_params:
+                        ttl: 60
                     general_settings:
                       master_key: %s
                     """
@@ -220,6 +224,94 @@ class ProxyIntegrationTest {
                         "{\"model\":\"gpt-4o\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}", headers(key)),
                 String.class);
         assertThat(afterDelete.getStatusCode().value()).isEqualTo(401);
+    }
+
+    @Test
+    void cacheServesIdenticalRequests() throws IOException {
+        String body = "{\"model\":\"gpt-4o\",\"messages\":[{\"role\":\"user\",\"content\":\"cache me uniquely\"}]}";
+        int upstreamBefore = UPSTREAM.getAllServeEvents().size();
+
+        ResponseEntity<String> first =
+                rest.postForEntity("/v1/chat/completions", new HttpEntity<>(body, headers(MASTER_KEY)), String.class);
+        ResponseEntity<String> second =
+                rest.postForEntity("/v1/chat/completions", new HttpEntity<>(body, headers(MASTER_KEY)), String.class);
+
+        assertThat(first.getStatusCode().value()).isEqualTo(200);
+        assertThat(second.getStatusCode().value()).isEqualTo(200);
+        assertThat(second.getHeaders().getFirst("x-litellm-cache")).isEqualTo("hit");
+        assertThat(mapper.readTree(second.getBody())
+                        .path("choices")
+                        .get(0)
+                        .path("message")
+                        .path("content"))
+                .isEqualTo(mapper.readTree(first.getBody())
+                        .path("choices")
+                        .get(0)
+                        .path("message")
+                        .path("content"));
+        assertThat(UPSTREAM.getAllServeEvents().size()).isEqualTo(upstreamBefore + 1);
+    }
+
+    @Test
+    void enforcesRpmLimit() throws IOException {
+        String key = generateKey("{\"key_alias\":\"rpm-test\",\"rpm_limit\":1}");
+        // distinct bodies so the cache cannot absorb the second request
+        ResponseEntity<String> first = rest.postForEntity(
+                "/v1/chat/completions",
+                new HttpEntity<>(
+                        "{\"model\":\"gpt-4o\",\"messages\":[{\"role\":\"user\",\"content\":\"rpm one\"}]}",
+                        headers(key)),
+                String.class);
+        ResponseEntity<String> second = rest.postForEntity(
+                "/v1/chat/completions",
+                new HttpEntity<>(
+                        "{\"model\":\"gpt-4o\",\"messages\":[{\"role\":\"user\",\"content\":\"rpm two\"}]}",
+                        headers(key)),
+                String.class);
+
+        assertThat(first.getStatusCode().value()).isEqualTo(200);
+        assertThat(second.getStatusCode().value()).isEqualTo(429);
+        assertThat(second.getBody()).contains("RPM");
+    }
+
+    @Test
+    void exposesPrometheusMetrics() {
+        rest.postForEntity(
+                "/v1/chat/completions",
+                new HttpEntity<>(
+                        "{\"model\":\"gpt-4o\",\"messages\":[{\"role\":\"user\",\"content\":\"metrics probe\"}]}",
+                        headers(MASTER_KEY)),
+                String.class);
+
+        ResponseEntity<String> metrics = rest.getForEntity("/actuator/prometheus", String.class);
+
+        assertThat(metrics.getStatusCode().value()).isEqualTo(200);
+        assertThat(metrics.getBody()).contains("litellm_request_duration");
+        assertThat(metrics.getBody()).contains("litellm_tokens_total");
+    }
+
+    @Test
+    void spendEndpointsAreMasterOnly() throws IOException {
+        String key = generateKey("{}");
+
+        ResponseEntity<String> denied = rest.exchange(
+                "/spend/logs", org.springframework.http.HttpMethod.GET, new HttpEntity<>(headers(key)), String.class);
+        assertThat(denied.getStatusCode().value()).isEqualTo(403);
+
+        ResponseEntity<String> logs = rest.exchange(
+                "/spend/logs",
+                org.springframework.http.HttpMethod.GET,
+                new HttpEntity<>(headers(MASTER_KEY)),
+                String.class);
+        assertThat(logs.getStatusCode().value()).isEqualTo(200);
+        assertThat(mapper.readTree(logs.getBody()).isArray()).isTrue();
+
+        ResponseEntity<String> byKey = rest.exchange(
+                "/spend/keys",
+                org.springframework.http.HttpMethod.GET,
+                new HttpEntity<>(headers(MASTER_KEY)),
+                String.class);
+        assertThat(byKey.getStatusCode().value()).isEqualTo(200);
     }
 
     @Test

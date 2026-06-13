@@ -2,7 +2,7 @@
 
 用 Java 重写 [LiteLLM](https://github.com/BerriAI/litellm) 的开源部分：统一 LLM SDK + Router + OpenAI 兼容 Proxy 网关。
 
-**当前阶段：M4 Proxy MVP 完成——OpenAI 兼容网关（`/v1/chat/completions` 含 SSE、`/v1/embeddings`、`/v1/models`）、LiteLLM 兼容 `config.yaml`、虚拟 Key（SHA-256 存储/模型白名单/预算/过期）、spend_logs 异步记账、Postgres + Flyway、docker-compose 一键起。下一步：M5 网关增强（限流/缓存/可观测性）。**
+**当前阶段：M5（第一批）完成——在 M4 网关基础上新增：精确缓存（Caffeine，`config.yaml` 的 `litellm_settings.cache` 开关）、Key 级 TPM/RPM 限流（滑动窗口）、Prometheus 指标（`/actuator/prometheus`，按 model/结果打标）、`/spend/logs`、`/spend/keys` 报表端点。下一步：M5 第二批（Redis 分布式限流/缓存、团队/用户层级）。**
 
 ```bash
 # 启动网关（需 Docker）

@@ -12,7 +12,9 @@ public record VirtualKey(
         BigDecimal maxBudget,
         BigDecimal spend,
         Instant expiresAt,
-        boolean blocked) {
+        boolean blocked,
+        Integer tpmLimit,
+        Integer rpmLimit) {
 
     public boolean allowsModel(String modelGroup) {
         return models.isEmpty() || models.contains(modelGroup);

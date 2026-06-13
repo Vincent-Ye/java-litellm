@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import dev.javalitellm.cache.ChatCacheKey;
 import dev.javalitellm.client.LiteLlm;
 import dev.javalitellm.core.chat.ChatChunk;
 import dev.javalitellm.core.chat.ChatRequest;
@@ -13,9 +14,13 @@ import dev.javalitellm.core.embedding.EmbeddingResponse;
 import dev.javalitellm.core.exception.LiteLlmException;
 import dev.javalitellm.core.exception.NotFoundException;
 import dev.javalitellm.core.exception.PermissionDeniedException;
+import dev.javalitellm.core.exception.RateLimitException;
 import dev.javalitellm.core.spi.StreamHandler;
 import dev.javalitellm.proxy.auth.AuthFilter;
+import dev.javalitellm.proxy.cache.ProxyCache;
 import dev.javalitellm.proxy.keys.VirtualKey;
+import dev.javalitellm.proxy.metrics.ProxyMetrics;
+import dev.javalitellm.proxy.ratelimit.RateLimiter;
 import dev.javalitellm.proxy.spend.SpendService;
 import dev.javalitellm.router.Deployment;
 import dev.javalitellm.router.Router;
@@ -24,8 +29,10 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UncheckedIOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -40,14 +47,27 @@ public class ChatController {
     private final OpenAiWireCodec codec;
     private final SpendService spend;
     private final ObjectMapper mapper;
+    private final ProxyCache cache;
+    private final RateLimiter rateLimiter;
+    private final ProxyMetrics metrics;
 
     public ChatController(
-            Router router, LiteLlm client, OpenAiWireCodec codec, SpendService spend, ObjectMapper mapper) {
+            Router router,
+            LiteLlm client,
+            OpenAiWireCodec codec,
+            SpendService spend,
+            ObjectMapper mapper,
+            ProxyCache cache,
+            RateLimiter rateLimiter,
+            ProxyMetrics metrics) {
         this.router = router;
         this.client = client;
         this.codec = codec;
         this.spend = spend;
         this.mapper = mapper;
+        this.cache = cache;
+        this.rateLimiter = rateLimiter;
+        this.metrics = metrics;
     }
 
     @PostMapping(value = "/v1/chat/completions", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -56,35 +76,92 @@ public class ChatController {
         ChatRequest chatRequest = codec.parseChatRequest(body);
         String group = chatRequest.model();
         VirtualKey key = authorize(request, group);
+        enforceRateLimits(key, group);
 
         if (!codec.isStream(body)) {
-            ChatResponse chatResponse = router.chat(chatRequest);
-            recordSpend(key, group, chatResponse);
-            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-            mapper.writeValue(response.getWriter(), codec.toWireResponse(chatResponse));
+            chatJson(chatRequest, group, key, response);
             return;
         }
 
+        long startNanos = System.nanoTime();
         response.setContentType(MediaType.TEXT_EVENT_STREAM_VALUE);
         response.setCharacterEncoding("UTF-8");
         PrintWriter writer = response.getWriter();
         router.chatStream(chatRequest, new StreamHandler() {
             @Override
             public void onChunk(ChatChunk chunk) {
+                if (chunk.usage() != null && key != null) {
+                    rateLimiter.recordTokens(key.tokenHash(), chunk.usage().totalTokens());
+                }
                 writeEvent(writer, codec.toWireChunk(chunk).toString());
             }
 
             @Override
             public void onComplete() {
+                metrics.recordRequest(group, "ok", sinceNanos(startNanos));
                 writeEvent(writer, "[DONE]");
             }
 
             @Override
             public void onError(LiteLlmException e) {
                 // mid-stream failure: emit an error event, the connection is already committed
+                metrics.recordRequest(group, "error", sinceNanos(startNanos));
                 writeEvent(writer, "{\"error\":{\"message\":\"" + e.getMessage() + "\"}}");
             }
         });
+    }
+
+    private void chatJson(ChatRequest chatRequest, String group, VirtualKey key, HttpServletResponse response)
+            throws IOException {
+        String cacheKey = cache.enabled() ? ChatCacheKey.of(chatRequest) : null;
+        if (cacheKey != null) {
+            Optional<ChatResponse> hit = cache.get(cacheKey);
+            metrics.recordCache(group, hit.isPresent());
+            if (hit.isPresent()) {
+                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                response.setHeader("x-litellm-cache", "hit");
+                mapper.writeValue(response.getWriter(), codec.toWireResponse(hit.get()));
+                return;
+            }
+        }
+
+        long startNanos = System.nanoTime();
+        ChatResponse chatResponse;
+        try {
+            chatResponse = router.chat(chatRequest);
+        } catch (LiteLlmException e) {
+            metrics.recordRequest(group, "error", sinceNanos(startNanos));
+            throw e;
+        }
+        metrics.recordRequest(group, "ok", sinceNanos(startNanos));
+        metrics.recordUsage(group, chatResponse);
+        if (key != null && chatResponse.usage() != null) {
+            rateLimiter.recordTokens(key.tokenHash(), chatResponse.usage().totalTokens());
+        }
+        recordSpend(key, group, chatResponse);
+        if (cacheKey != null) {
+            cache.put(cacheKey, chatResponse);
+        }
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        mapper.writeValue(response.getWriter(), codec.toWireResponse(chatResponse));
+    }
+
+    private void enforceRateLimits(VirtualKey key, String group) {
+        if (key == null) {
+            return; // master key is not rate limited
+        }
+        if (!rateLimiter.withinTokenLimit(key.tokenHash(), key.tpmLimit())) {
+            metrics.recordRateLimited(group, "tpm");
+            throw new RateLimitException("key exceeded its TPM limit of " + key.tpmLimit(), null, group);
+        }
+        if (!rateLimiter.tryAcquireRequest(key.tokenHash(), key.rpmLimit())) {
+            metrics.recordRateLimited(group, "rpm");
+            throw new RateLimitException("key exceeded its RPM limit of " + key.rpmLimit(), null, group);
+        }
+    }
+
+    private static Duration sinceNanos(long startNanos) {
+        return Duration.ofNanos(System.nanoTime() - startNanos);
     }
 
     @PostMapping(value = "/v1/embeddings", produces = MediaType.APPLICATION_JSON_VALUE)
