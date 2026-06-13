@@ -1,0 +1,13 @@
+# LiteLLM-compatible proxy config. Copy to config.yaml and adjust.
+model_list:
+  - model_name: gpt-4o                      # name exposed to clients
+    litellm_params:
+      model: openai/gpt-4o                  # actual provider route
+      api_key: os.environ/OPENAI_API_KEY
+  - model_name: claude-sonnet
+    litellm_params:
+      model: anthropic/claude-sonnet-4-6
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY

@@ -1,0 +1,34 @@
+spring:
+  application:
+    name: litellm-proxy
+  threads:
+    virtual:
+      enabled: true
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/litellm}
+    username: ${SPRING_DATASOURCE_USERNAME:litellm}
+    password: ${SPRING_DATASOURCE_PASSWORD:litellm}
+
+server:
+  port: 4000
+  shutdown: graceful
+
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+
+litellm:
+  config: ${LITELLM_CONFIG:config.yaml}

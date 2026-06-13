@@ -2,7 +2,21 @@
 
 用 Java 重写 [LiteLLM](https://github.com/BerriAI/litellm) 的开源部分：统一 LLM SDK + Router + OpenAI 兼容 Proxy 网关。
 
-**当前阶段：M3 Router 完成——四种负载均衡策略（simple-shuffle / least-busy / latency-based / usage-based）、跨部署重试、429 即时冷却、fallback 与 context-window fallback 链、总超时预算，1000 并发压测通过。供应商能力见[能力矩阵](docs/CAPABILITIES.md)。下一步：M4 Proxy MVP。**
+**当前阶段：M4 Proxy MVP 完成——OpenAI 兼容网关（`/v1/chat/completions` 含 SSE、`/v1/embeddings`、`/v1/models`）、LiteLLM 兼容 `config.yaml`、虚拟 Key（SHA-256 存储/模型白名单/预算/过期）、spend_logs 异步记账、Postgres + Flyway、docker-compose 一键起。下一步：M5 网关增强（限流/缓存/可观测性）。**
+
+```bash
+# 启动网关（需 Docker）
+cp config.example.yaml config.yaml   # 填入你的 API Key
+LITELLM_MASTER_KEY=sk-master docker compose up -d
+
+# 签发虚拟 Key
+curl -X POST localhost:4000/key/generate -H "Authorization: Bearer sk-master" \
+     -d '{"models":["gpt-4o"],"max_budget":10.0,"duration":"30d"}'
+
+# 用任意 OpenAI SDK 指向网关即可
+curl localhost:4000/v1/chat/completions -H "Authorization: Bearer sk-..." \
+     -d '{"model":"gpt-4o","messages":[{"role":"user","content":"Hello"}]}'
+```
 
 ```java
 Router router = Router.builder()

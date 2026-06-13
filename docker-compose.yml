@@ -1,0 +1,37 @@
+services:
+  proxy:
+    build:
+      context: .
+      dockerfile: litellm-proxy/Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/litellm
+      SPRING_DATASOURCE_USERNAME: litellm
+      SPRING_DATASOURCE_PASSWORD: litellm
+      LITELLM_CONFIG: /app/config.yaml
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-master-change-me}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: litellm
+      POSTGRES_USER: litellm
+      POSTGRES_PASSWORD: litellm
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U litellm"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

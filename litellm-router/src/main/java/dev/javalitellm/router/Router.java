@@ -76,6 +76,19 @@ public final class Router {
         return state;
     }
 
+    /** Model groups known to this router, in configuration order. */
+    public Set<String> modelGroups() {
+        return groups.keySet();
+    }
+
+    /**
+     * Picks one healthy deployment of the group without calling it — for operations the router does
+     * not orchestrate itself yet (e.g. embeddings at the proxy layer). Null when none is available.
+     */
+    public Deployment pick(String group) {
+        return selectHealthy(group, Set.of());
+    }
+
     public ChatResponse chat(ChatRequest request) {
         return route(request, null);
     }

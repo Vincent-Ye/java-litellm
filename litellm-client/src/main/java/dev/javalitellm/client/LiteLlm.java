@@ -196,7 +196,12 @@ public final class LiteLlm {
     }
 
     public EmbeddingResponse embedding(EmbeddingRequest request) {
-        Route route = resolve(request.model());
+        return embedding(request, null);
+    }
+
+    /** Like {@link #embedding(EmbeddingRequest)} but with an explicit per-call provider config. */
+    public EmbeddingResponse embedding(EmbeddingRequest request, ProviderConfig configOverride) {
+        Route route = resolve(request.model(), configOverride);
         EmbeddingRequest bare =
                 new EmbeddingRequest(route.id.model(), request.input(), request.dimensions(), request.extraParams());
         return withRetries(() -> route.provider.embedding(bare, route.config));

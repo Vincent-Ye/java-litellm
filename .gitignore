@@ -12,3 +12,5 @@ target/
 .DS_Store
 *.log
 .env
+# real proxy config may contain API keys; start from config.example.yaml
+/config.yaml
