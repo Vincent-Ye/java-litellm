@@ -17,8 +17,14 @@ import org.springframework.context.annotation.Configuration;
 public class ProxyBeans {
 
     @Bean
-    public ProxyConfigLoader.LoadedConfig loadedConfig(@Value("${litellm.config:config.yaml}") String configPath) {
-        return new ProxyConfigLoader().load(Path.of(configPath));
+    public ProxyConfigLoader proxyConfigLoader() {
+        return new ProxyConfigLoader();
+    }
+
+    @Bean
+    public ProxyConfigLoader.LoadedConfig loadedConfig(
+            ProxyConfigLoader loader, @Value("${litellm.config:config.yaml}") String configPath) {
+        return loader.load(Path.of(configPath));
     }
 
     @Bean

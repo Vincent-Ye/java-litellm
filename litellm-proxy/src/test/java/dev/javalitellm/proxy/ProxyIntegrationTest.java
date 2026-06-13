@@ -402,6 +402,76 @@ class ProxyIntegrationTest {
     }
 
     @Test
+    void dynamicModelAddRouteAndDelete() throws IOException {
+        UPSTREAM.stubFor(
+                post(urlEqualTo("/dyn/v1/chat/completions"))
+                        .willReturn(
+                                aResponse()
+                                        .withStatus(200)
+                                        .withHeader("Content-Type", "application/json")
+                                        .withBody(
+                                                """
+                                {"id":"c-dyn","model":"gpt-4o","created":1,
+                                 "choices":[{"index":0,"message":{"role":"assistant","content":"from dynamic"},
+                                             "finish_reason":"stop"}],
+                                 "usage":{"prompt_tokens":2,"completion_tokens":1}}
+                                """)));
+
+        // virtual key cannot manage models
+        String key = generateKey("{}");
+        ResponseEntity<String> denied =
+                rest.postForEntity("/model/new", new HttpEntity<>("{}", headers(key)), String.class);
+        assertThat(denied.getStatusCode().value()).isEqualTo(403);
+
+        // add a brand-new model group at runtime
+        String addBody = "{\"model_name\":\"dynamic-model\",\"litellm_params\":{"
+                + "\"model\":\"openai/gpt-4o\",\"api_key\":\"sk-x\",\"api_base\":\"" + UPSTREAM.baseUrl()
+                + "/dyn/v1\"}}";
+        ResponseEntity<String> added =
+                rest.postForEntity("/model/new", new HttpEntity<>(addBody, headers(MASTER_KEY)), String.class);
+        assertThat(added.getStatusCode().value()).isEqualTo(200);
+
+        // routable immediately, no restart
+        ResponseEntity<String> chat = rest.postForEntity(
+                "/v1/chat/completions",
+                new HttpEntity<>(
+                        "{\"model\":\"dynamic-model\",\"messages\":[{\"role\":\"user\",\"content\":\"hi dyn\"}]}",
+                        headers(MASTER_KEY)),
+                String.class);
+        assertThat(chat.getStatusCode().value()).isEqualTo(200);
+        assertThat(mapper.readTree(chat.getBody())
+                        .path("choices")
+                        .get(0)
+                        .path("message")
+                        .path("content")
+                        .asText())
+                .isEqualTo("from dynamic");
+
+        // /model/info lists it
+        ResponseEntity<String> info = rest.exchange(
+                "/model/info",
+                org.springframework.http.HttpMethod.GET,
+                new HttpEntity<>(headers(MASTER_KEY)),
+                String.class);
+        assertThat(info.getBody()).contains("dynamic-model");
+
+        // delete, then it is gone
+        ResponseEntity<String> deleted = rest.postForEntity(
+                "/model/delete",
+                new HttpEntity<>("{\"model_name\":\"dynamic-model\"}", headers(MASTER_KEY)),
+                String.class);
+        assertThat(deleted.getStatusCode().value()).isEqualTo(200);
+
+        ResponseEntity<String> afterDelete = rest.postForEntity(
+                "/v1/chat/completions",
+                new HttpEntity<>(
+                        "{\"model\":\"dynamic-model\",\"messages\":[{\"role\":\"user\",\"content\":\"gone now\"}]}",
+                        headers(MASTER_KEY)),
+                String.class);
+        assertThat(afterDelete.getStatusCode().value()).isEqualTo(404);
+    }
+
+    @Test
     void streamsServerSentEvents() {
         // more specific stub (body match) wins over the JSON one for streaming requests
         UPSTREAM.stubFor(

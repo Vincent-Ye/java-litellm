@@ -31,7 +31,7 @@ public class AuthFilter extends OncePerRequestFilter {
     }
 
     private static final java.util.List<String> ADMIN_PREFIXES =
-            java.util.List.of("/key/", "/spend/", "/team/", "/user/");
+            java.util.List.of("/key/", "/spend/", "/team/", "/user/", "/model/");
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {

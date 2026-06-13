@@ -50,27 +50,10 @@ public final class ProxyConfigLoader {
         List<Deployment> deployments = new ArrayList<>();
         int index = 0;
         for (JsonNode entry : root.path("model_list")) {
-            String group = entry.path("model_name").asText();
-            JsonNode params = entry.path("litellm_params");
-            if (group.isBlank() || params.isMissingNode()) {
-                throw new IllegalArgumentException(
-                        "model_list entry " + index + " needs model_name and litellm_params");
-            }
-            ProviderConfig.Builder config = ProviderConfig.builder();
-            resolve(params, "api_key").ifPresent(config::apiKey);
-            resolve(params, "api_base").ifPresent(config::apiBase);
-            resolve(params, "api_version").ifPresent(config::apiVersion);
-            resolve(params, "aws_region_name").ifPresent(config::region);
-
-            deployments.add(Deployment.builder()
-                    .id(group + "-" + index)
-                    .modelGroup(group)
-                    .model(params.path("model").asText())
-                    .config(config.build())
-                    .weight(params.path("weight").asInt(1))
-                    .tpm(params.has("tpm") ? params.path("tpm").asInt() : null)
-                    .rpm(params.has("rpm") ? params.path("rpm").asInt() : null)
-                    .build());
+            deployments.add(parseEntry(
+                    entry.path("model_name").asText(),
+                    entry.path("litellm_params"),
+                    entry.path("model_name").asText() + "-" + index));
             index++;
         }
         if (deployments.isEmpty()) {
@@ -82,6 +65,30 @@ public final class ProxyConfigLoader {
         boolean cacheEnabled = litellmSettings.path("cache").asBoolean(false);
         int cacheTtl = litellmSettings.path("cache_params").path("ttl").asInt(300);
         return new LoadedConfig(deployments, masterKey, cacheEnabled, cacheTtl);
+    }
+
+    /**
+     * Parses one {@code model_list} entry (a model_name + its litellm_params) into a deployment.
+     * Reused by the dynamic {@code /model/new} endpoint. {@code os.environ/} refs are resolved.
+     */
+    public Deployment parseEntry(String group, JsonNode params, String id) {
+        if (group == null || group.isBlank() || params.isMissingNode()) {
+            throw new IllegalArgumentException("model entry needs model_name and litellm_params");
+        }
+        ProviderConfig.Builder config = ProviderConfig.builder();
+        resolve(params, "api_key").ifPresent(config::apiKey);
+        resolve(params, "api_base").ifPresent(config::apiBase);
+        resolve(params, "api_version").ifPresent(config::apiVersion);
+        resolve(params, "aws_region_name").ifPresent(config::region);
+        return Deployment.builder()
+                .id(id)
+                .modelGroup(group)
+                .model(params.path("model").asText())
+                .config(config.build())
+                .weight(params.path("weight").asInt(1))
+                .tpm(params.has("tpm") ? params.path("tpm").asInt() : null)
+                .rpm(params.has("rpm") ? params.path("rpm").asInt() : null)
+                .build();
     }
 
     private java.util.Optional<String> resolve(JsonNode node, String field) {

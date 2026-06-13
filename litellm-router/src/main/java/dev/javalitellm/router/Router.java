@@ -38,7 +38,8 @@ public final class Router {
 
     private static final Logger log = LoggerFactory.getLogger(Router.class);
 
-    private final Map<String, List<Deployment>> groups;
+    // Replaced wholesale on reconfiguration; volatile keeps reads lock-free and consistent.
+    private volatile Map<String, List<Deployment>> groups;
     private final RoutingStrategy strategy;
     private final RouterStateStore state;
     private final LiteLlm client;
@@ -49,13 +50,7 @@ public final class Router {
     private final Duration totalTimeout;
 
     private Router(Builder builder) {
-        Map<String, List<Deployment>> grouped = new LinkedHashMap<>();
-        for (Deployment deployment : builder.deployments) {
-            grouped.computeIfAbsent(deployment.modelGroup(), k -> new ArrayList<>())
-                    .add(deployment);
-        }
-        grouped.replaceAll((k, v) -> List.copyOf(v));
-        this.groups = Map.copyOf(grouped);
+        this.groups = group(builder.deployments);
         this.strategy = builder.strategy;
         this.state = builder.state;
         this.client = builder.client != null
@@ -79,6 +74,50 @@ public final class Router {
     /** Model groups known to this router, in configuration order. */
     public Set<String> modelGroups() {
         return groups.keySet();
+    }
+
+    /** Current deployments grouped by model group — a snapshot, safe to read without locking. */
+    public Map<String, List<Deployment>> deployments() {
+        return groups;
+    }
+
+    /** Adds a deployment and makes it routable immediately. */
+    public synchronized void addDeployment(Deployment deployment) {
+        Map<String, List<Deployment>> next = mutableCopy();
+        next.computeIfAbsent(deployment.modelGroup(), k -> new ArrayList<>()).add(deployment);
+        this.groups = freeze(next);
+    }
+
+    /** Removes every deployment of a model group. Returns false when the group is unknown. */
+    public synchronized boolean removeGroup(String modelGroup) {
+        if (!groups.containsKey(modelGroup)) {
+            return false;
+        }
+        Map<String, List<Deployment>> next = mutableCopy();
+        next.remove(modelGroup);
+        this.groups = freeze(next);
+        return true;
+    }
+
+    private Map<String, List<Deployment>> mutableCopy() {
+        Map<String, List<Deployment>> copy = new LinkedHashMap<>();
+        groups.forEach((k, v) -> copy.put(k, new ArrayList<>(v)));
+        return copy;
+    }
+
+    private static Map<String, List<Deployment>> group(List<Deployment> deployments) {
+        Map<String, List<Deployment>> grouped = new LinkedHashMap<>();
+        for (Deployment deployment : deployments) {
+            grouped.computeIfAbsent(deployment.modelGroup(), k -> new ArrayList<>())
+                    .add(deployment);
+        }
+        return freeze(grouped);
+    }
+
+    private static Map<String, List<Deployment>> freeze(Map<String, List<Deployment>> grouped) {
+        Map<String, List<Deployment>> frozen = new LinkedHashMap<>();
+        grouped.forEach((k, v) -> frozen.put(k, List.copyOf(v)));
+        return Map.copyOf(frozen);
     }
 
     /**

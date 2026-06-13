@@ -2,7 +2,7 @@
 
 用 Java 重写 [LiteLLM](https://github.com/BerriAI/litellm) 的开源部分：统一 LLM SDK + Router + OpenAI 兼容 Proxy 网关。
 
-**当前阶段：M5（第二批）完成——新增团队/用户层级：`teams`/`users` 表、虚拟 Key 归属团队/用户、级联预算（Key 超额→Team 超额均拒绝）、级联限流（Key→Team 共享 TPM/RPM）、记账级联累加到 team/user，`/team/new|info|update|delete`、`/user/new|info` 管理端点。叠加第一批的缓存/Key 限流/Prometheus/`/spend` 报表。下一步：M5 收尾（Redis 分布式限流/缓存、动态模型热更新）后进入 M6 发布加固。**
+**当前阶段：M5（第三批）完成——动态模型管理：`/model/new|info|delete` 热生效（Router 改为可变，volatile groups + 无锁读），新增模型立即可路由、删除即失效，并持久化到 `model_deployments` 表、重启自动恢复。叠加前两批的团队/用户层级、缓存、Key/团队限流、Prometheus、`/spend` 报表。下一步：M5 收尾（Redis 分布式限流/缓存）后进入 M6 发布加固。**
 
 ```bash
 # 启动网关（需 Docker）
