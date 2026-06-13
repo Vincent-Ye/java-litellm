@@ -1,14 +1,14 @@
-**English** | [中文](GETTING_STARTED.zh.md)
+[English](GETTING_STARTED.md) | **中文**
 
-# Getting started
+# 快速开始
 
-Two ways to use this project: as a **Java SDK** embedded in your application, or as a **Proxy gateway** exposing an OpenAI-compatible HTTP API.
+两种用法：作为 **Java SDK** 直接嵌入应用，或作为 **Proxy 网关**对外提供 OpenAI 兼容 API。
 
 ---
 
-## 1. SDK
+## 一、SDK
 
-### Dependencies
+### 依赖
 
 ```xml
 <dependency>
@@ -16,7 +16,7 @@ Two ways to use this project: as a **Java SDK** embedded in your application, or
   <artifactId>litellm-client</artifactId>
   <version>0.1.0</version>
 </dependency>
-<!-- Pull in only the providers you need; classpath presence enables them via ServiceLoader. -->
+<!-- 按需引入供应商，classpath 上有哪个就支持哪个（ServiceLoader 自动发现） -->
 <dependency>
   <groupId>io.github.vincent-ye</groupId>
   <artifactId>provider-openai</artifactId>
@@ -29,7 +29,7 @@ Two ways to use this project: as a **Java SDK** embedded in your application, or
 </dependency>
 ```
 
-### Synchronous call
+### 同步调用
 
 ```java
 LiteLlm client = LiteLlm.builder()
@@ -38,32 +38,32 @@ LiteLlm client = LiteLlm.builder()
         .build();
 
 ChatResponse resp = client.chat(ChatRequest.builder()
-        .model("anthropic/claude-sonnet-4-6")   // change the prefix to switch providers
+        .model("anthropic/claude-sonnet-4-6")   // 只改前缀即可切换供应商
         .message(Message.system("Be concise."))
         .message(Message.user("Hello!"))
         .build());
 
 System.out.println(resp.firstText());
-System.out.println("cost = $" + resp.costUsd());   // SDK computes the cost for you
+System.out.println("cost = $" + resp.costUsd());   // SDK 直接算好成本
 ```
 
-### Streaming
+### 流式
 
 ```java
-// Form 1: lazy Stream
+// 形态 1：惰性 Stream
 client.chatStream(req).forEach(chunk -> System.out.print(chunk.textDelta()));
 
-// Form 2: callback
+// 形态 2：回调
 client.chatStream(req, new StreamHandler() {
     public void onChunk(ChatChunk chunk) { System.out.print(chunk.textDelta()); }
     public void onComplete() { System.out.println(); }
 });
 
-// Form 3: async
+// 形态 3：异步
 CompletableFuture<ChatResponse> future = client.chatAsync(req);
 ```
 
-### Tool calling
+### 工具调用
 
 ```java
 ChatRequest req = ChatRequest.builder()
@@ -75,11 +75,11 @@ ChatRequest req = ChatRequest.builder()
 
 ChatResponse resp = client.chat(req);
 for (ToolCall call : resp.choices().getFirst().message().toolCalls()) {
-    // call.name(), call.arguments() (JSON string)
+    // call.name(), call.arguments() (JSON 字符串)
 }
 ```
 
-### Routing and fallback (Router)
+### 路由与降级（Router）
 
 ```java
 Router router = Router.builder()
@@ -88,27 +88,27 @@ Router router = Router.builder()
         .deployment(Deployment.builder().id("azure-eastus").modelGroup("gpt-4o")
                 .model("azure/my-gpt4o-deployment").config(azureCfg).build())
         .strategy(RoutingStrategy.latencyBased())
-        .fallback("gpt-4o", List.of("claude-sonnet"))               // group-level fallback
-        .contextWindowFallback("gpt-4o", List.of("gpt-4o-long"))    // long-context fallback
+        .fallback("gpt-4o", List.of("claude-sonnet"))               // 组级降级
+        .contextWindowFallback("gpt-4o", List.of("gpt-4o-long"))    // 超上下文降级
         .build();
 
-ChatResponse resp = router.chat(req);   // automatic load balancing + fail-over + cooldown
+ChatResponse resp = router.chat(req);   // 自动负载均衡 + 故障转移 + 冷却
 ```
 
 ---
 
-## 2. Proxy gateway
+## 二、Proxy 网关
 
-### One-command Docker
+### Docker 一键起
 
 ```bash
-cp config.example.yaml config.yaml      # fill in your provider keys
-export LITELLM_MASTER_KEY=sk-master-change-me
+cp config.example.yaml config.yaml      # 填入你的供应商 Key
+export LITELLM_MASTER_KEY=sk-master-改我
 export OPENAI_API_KEY=sk-...
-docker compose up -d                    # starts proxy + postgres
+docker compose up -d                    # 启动 proxy + postgres
 ```
 
-`config.yaml` (semantics aligned with LiteLLM's `config.yaml`):
+`config.yaml`（与 LiteLLM 的 `config.yaml` 语义一致）：
 
 ```yaml
 model_list:
@@ -122,14 +122,14 @@ model_list:
       api_key: os.environ/ANTHROPIC_API_KEY
 litellm_settings:
   cache: true
-  redis_url: os.environ/REDIS_URL    # optional; enables the Redis backend for multi-replica deployments
+  redis_url: os.environ/REDIS_URL    # 可选；多副本部署时启用 Redis 后端
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
 ```
 
-> **Single vs. multi-replica**: without `redis_url`, cache / rate limiting / router state are in-process (Caffeine + memory windows) — good for single-replica deployments. Set `redis_url` and all three switch to Redis (cache `SETEX` + Lua atomic sliding windows), so counters are shared across replicas and cooldowns sync instantly.
+> **单副本 vs 多副本**：默认无 `redis_url` 时，缓存/限流/Router 状态走进程内（Caffeine + 内存窗口），适合单副本部署。设了 `redis_url` 后，三者全部切到 Redis（缓存 `SETEX` + Lua 原子滑动窗口），多副本之间计数共享、冷却即时同步。
 
-### Generate a virtual key
+### 签发虚拟 Key
 
 ```bash
 curl -X POST localhost:4000/key/generate \
@@ -139,7 +139,7 @@ curl -X POST localhost:4000/key/generate \
 # => {"key":"sk-...","token_hash":"..."}
 ```
 
-### Call it like the OpenAI API
+### 像调用 OpenAI 一样调用
 
 ```bash
 curl localhost:4000/v1/chat/completions \
@@ -147,25 +147,25 @@ curl localhost:4000/v1/chat/completions \
      -d '{"model":"gpt-4o","messages":[{"role":"user","content":"Hello"}]}'
 ```
 
-Any OpenAI SDK works — just point `base_url` at `http://localhost:4000`. No code changes.
+任何 OpenAI SDK 把 `base_url` 指向 `http://localhost:4000` 即可，无需改代码。
 
-### Teams / users / dynamic models
+### 团队 / 用户 / 动态模型
 
 ```bash
-# Team (budget and rate limits shared across multiple keys)
+# 团队（预算与限流在多个 Key 间共享）
 curl -X POST localhost:4000/team/new -H "Authorization: Bearer $MASTER" \
      -d '{"team_alias":"acme","max_budget":1000,"rpm_limit":600}'
 
-# Add or remove models at runtime; takes effect immediately, no restart
+# 运行时增删模型，立即生效，无需重启
 curl -X POST localhost:4000/model/new -H "Authorization: Bearer $MASTER" \
      -d '{"model_name":"deepseek","litellm_params":{"model":"openai/deepseek-chat",
           "api_base":"https://api.deepseek.com/v1","api_key":"os.environ/DEEPSEEK_API_KEY"}}'
 ```
 
-### Observability
+### 可观测性
 
-- Metrics: `GET /actuator/prometheus` (request latency / tokens / cost / cache hits / rate-limited, tagged by model)
-- Health: `GET /actuator/health` (incl. liveness/readiness probes)
-- Spend reports: `GET /spend/logs`, `GET /spend/keys` (master key only)
+- 指标：`GET /actuator/prometheus`（请求时延/token/成本/缓存命中/限流，按 model 维度打标）
+- 健康检查：`GET /actuator/health`（含 liveness/readiness 探针）
+- 用量报表：`GET /spend/logs`、`GET /spend/keys`（master key 限定）
 
-Full management endpoint reference is in [DESIGN.md](DESIGN.md) §6.2; provider capabilities are in [CAPABILITIES.md](CAPABILITIES.md).
+完整管理端点见 [DESIGN.md](DESIGN.zh.md) §6.2，供应商能力见 [CAPABILITIES.md](CAPABILITIES.zh.md)。

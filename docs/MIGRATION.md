@@ -1,12 +1,14 @@
-# 从 LiteLLM (Python) 迁移
+**English** | [中文](MIGRATION.zh.md)
 
-java-litellm 在**配置文件**和**管理 API** 层面刻意对齐 LiteLLM，多数场景可平滑迁移。本文列出对齐点与已知差异。
+# Migration from LiteLLM (Python)
+
+java-litellm deliberately aligns with LiteLLM at the **config file** and **management API** layers, so most existing setups port over smoothly. This document lists what aligns and what doesn't.
 
 ---
 
 ## 1. config.yaml
 
-`model_list` / `litellm_params` / `general_settings` / `litellm_settings` 的核心结构一致，`os.environ/VAR` 引用语法相同：
+The core structure of `model_list` / `litellm_params` / `general_settings` / `litellm_settings` is identical, and the `os.environ/VAR` reference syntax is preserved:
 
 ```yaml
 model_list:
@@ -14,11 +16,11 @@ model_list:
     litellm_params:
       model: openai/gpt-4o
       api_key: os.environ/OPENAI_API_KEY
-      api_base: https://...        # 可选；OpenAI 兼容端点用它覆盖
+      api_base: https://...        # optional; OpenAI-compatible endpoints use this override
       api_version: 2024-10-21      # Azure
       aws_region_name: us-east-1   # Bedrock
-      weight: 2                    # 负载均衡权重
-      tpm: 100000                  # 部署级 TPM/RPM（usage-based 路由用）
+      weight: 2                    # load-balancing weight
+      tpm: 100000                  # deployment-level TPM/RPM (used by usage-based routing)
       rpm: 600
 litellm_settings:
   cache: true
@@ -28,45 +30,45 @@ general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
 ```
 
-> 已支持的字段子集即上表。LiteLLM 中更冷门的 `litellm_params`（如部分 guardrail、router 调参）尚未实现，迁移时会被忽略而非报错——请对照本文确认关键字段都在支持范围内。
+> Only the subset of fields above is supported today. Less-common `litellm_params` fields (some guardrail and router tuning knobs in LiteLLM) are not implemented yet and will be ignored silently instead of erroring on migration — cross-check against this list to confirm your key fields are covered.
 
-## 2. 端点对齐
+## 2. Endpoint parity
 
-| 端点 | 状态 |
+| Endpoint | Status |
 |------|------|
-| `POST /v1/chat/completions`（含 SSE） | ✅ |
+| `POST /v1/chat/completions` (incl. SSE) | ✅ |
 | `POST /v1/embeddings` | ✅ |
-| `GET /v1/models` | ✅（按 Key 权限过滤） |
+| `GET /v1/models` | ✅ (filtered by key permissions) |
 | `POST /key/generate\|info\|update\|delete` | ✅ |
 | `POST /team/new\|info\|update\|delete` | ✅ |
 | `POST /user/new\|info` | ✅ |
-| `POST /model/new\|delete`、`GET /model/info` | ✅（热生效） |
+| `POST /model/new\|delete`, `GET /model/info` | ✅ (hot-reload) |
 | `GET /spend/logs\|keys` | ✅ |
-| `GET /health`、`/actuator/health`、`/actuator/prometheus` | ✅ |
-| `POST /v1/completions`、`/v1/images/*`、`/v1/audio/*`、rerank、pass-through | ⏳ v1.x |
+| `GET /health`, `/actuator/health`, `/actuator/prometheus` | ✅ |
+| `POST /v1/completions`, `/v1/images/*`, `/v1/audio/*`, rerank, pass-through | ⏳ v1.x |
 
-虚拟 Key 行为一致：`sk-` 前缀、库中只存 SHA-256 哈希、模型白名单、`max_budget`、`duration`（`30s/30m/30h/30d`）、TPM/RPM 限额、过期与封禁。
+Virtual-key behavior matches: `sk-` prefix, SHA-256-only storage, model whitelist, `max_budget`, `duration` (`30s/30m/30h/30d`), TPM/RPM limits, expiry and blocking.
 
-## 3. 供应商前缀
+## 3. Provider prefixes
 
-模型路由字符串约定与 LiteLLM 相同：`openai/...`、`anthropic/...`、`azure/...`、`gemini/...`、`bedrock/...`、`mistral/...`，无前缀按 OpenAI 处理。OpenAI 兼容供应商（DeepSeek、Groq、Together、Ollama、vLLM 等）用 `provider-openai` + `api_base` 覆盖即可，与 LiteLLM 思路一致。
+Model route strings follow the same convention as LiteLLM: `openai/...`, `anthropic/...`, `azure/...`, `gemini/...`, `bedrock/...`, `mistral/...`. A route without a prefix defaults to OpenAI. OpenAI-compatible providers (DeepSeek, Groq, Together, Ollama, vLLM, ...) work through `provider-openai` + an `api_base` override — same pattern as LiteLLM.
 
-## 4. 已知差异
+## 4. Known differences
 
-1. **供应商范围**：v1.0 聚焦 6 家 Tier-1 供应商（见 [CAPABILITIES.md](CAPABILITIES.md)），不是 LiteLLM 的 100+。其余通过 SPI 由社区扩展。
-2. **企业版功能不在范围内**：SSO/SAML、审计日志、JWT 团队鉴权、企业级 Guardrails 不实现（这些在 LiteLLM 中也非纯开源部分）。
-3. **分布式后端**：默认进程内实现；在 `config.yaml` 的 `litellm_settings.redis_url` 或 `general_settings.redis_url` 设值后，缓存（Redis SETEX）、限流（Lua 原子滑动窗口）、Router 冷却与时延窗口都切到 Redis，多副本部署计数精确（误差由 Redis 一致性决定，非进程独立）。
-4. **Token 计数**：OpenAI 系用 jtokkit 精确计数；非 OpenAI 系优先用响应 `usage` 字段，预估场景退化为近似——与 LiteLLM `token_counter` 行为一致。
-5. **价格表**：复用 LiteLLM 的 `model_prices_and_context_window.json`，内置快照打进 jar；未知模型的成本返回 `null` 而非 0，便于区分「免费」与「未知」。
-6. **回调生态**：v1.0 内置日志/Prometheus/OTel；Langfuse、自定义 Webhook 等在 v1.x。
-7. **错误体**：统一映射为 OpenAI 风格 `{"error":{"message","type","code"}}`，`type` 为内部异常类名（如 `RateLimitException`）。
+1. **Provider coverage**: v1.0 focuses on the 6 Tier-1 providers (see [CAPABILITIES.md](CAPABILITIES.md)), not LiteLLM's 100+. The rest are SPI extension points for the community.
+2. **Enterprise features are out of scope**: SSO/SAML, audit logs, JWT team auth, enterprise Guardrails are not implemented (these aren't pure open-source in LiteLLM either).
+3. **Distributed backends**: in-process by default; setting `litellm_settings.redis_url` (or `general_settings.redis_url`) in `config.yaml` switches cache, rate limiter and router state (cooldown + latency windows) to Redis, giving accurate cross-replica counters (consistency bounded by Redis itself, not per-process drift).
+4. **Token counting**: OpenAI-family models use jtokkit for exact counts; other providers prefer the response `usage` field and fall back to approximate estimation when usage is unavailable — same behavior as LiteLLM's `token_counter`.
+5. **Price table**: reuses LiteLLM's `model_prices_and_context_window.json`; a snapshot is bundled in the jar. Unknown models return `null` cost (not 0) so you can distinguish "free" from "unknown".
+6. **Callback ecosystem**: v1.0 ships logging / Prometheus / OTel built in; Langfuse, custom Webhook etc. are in v1.x.
+7. **Error body**: uniformly mapped to the OpenAI shape `{"error":{"message","type","code"}}`. `type` is the internal exception class name (e.g. `RateLimitException`).
 
-## 5. 迁移检查清单
+## 5. Migration checklist
 
-- [ ] `config.yaml` 的 `model_list` 字段都在 §1 支持范围内
-- [ ] 用到的供应商在 6 家 Tier-1 之内，或为 OpenAI 兼容端点
-- [ ] 没有依赖企业版功能（SSO/审计日志/企业 Guardrail）
-- [ ] 多副本部署的限流/预算精度要求可接受单副本计数，或等待 Redis 后端
-- [ ] 客户端只需把 `base_url` 指向新网关，鉴权仍用 `Authorization: Bearer sk-...`
+- [ ] All `model_list` fields used in `config.yaml` are covered by §1
+- [ ] Required providers are in the 6 Tier-1 list, or are OpenAI-compatible endpoints
+- [ ] No dependency on enterprise features (SSO / audit logs / enterprise Guardrails)
+- [ ] Multi-replica deployments: either single-replica counter precision is acceptable, or you set `redis_url` for the Redis backend
+- [ ] Clients only need to point `base_url` at the new gateway; auth still uses `Authorization: Bearer sk-...`
 
-有遗漏的对齐需求，欢迎提 issue。
+Missing something on the alignment list? Open an issue.

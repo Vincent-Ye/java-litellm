@@ -1,25 +1,27 @@
-# 供应商能力矩阵
+**English** | [中文](CAPABILITIES.zh.md)
 
-> 与 `ProviderDiscoveryTest` 及各 provider 的 `capabilities()` 声明保持一致。新增 provider 时同步更新本表。
+# Provider capability matrix
 
-| 能力 | openai | anthropic | azure | mistral | gemini | bedrock |
+> Kept in sync with `ProviderDiscoveryTest` and each provider's `capabilities()` declaration. Update this table when adding a new provider.
+
+| Capability | openai | anthropic | azure | mistral | gemini | bedrock |
 |------|:------:|:---------:|:-----:|:-------:|:------:|:-------:|
-| Chat（同步/异步） | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| 流式（SSE / event stream） | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| 工具调用（function calling） | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| 视觉输入（图片） | ✅ | ✅ | ✅ | — | ✅ | ✅ |
+| Chat (sync / async) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Streaming (SSE / event stream) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Tool calling (function calling) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Vision input (images) | ✅ | ✅ | ✅ | — | ✅ | ✅ |
 | Embeddings | ✅ | — | ✅ | ✅ | ✅ | —¹ |
-| 结构化输出（JSON Schema） | ✅ | — | ✅ | ✅ | ✅ | — |
+| Structured output (JSON Schema) | ✅ | — | ✅ | ✅ | ✅ | — |
 
-¹ Bedrock 的 embedding 走按模型族的 InvokeModel（Titan/Cohere），列入 v1.x。
+¹ Bedrock embeddings go through per-family InvokeModel (Titan / Cohere); planned for v1.x.
 
-## 配置要点
+## Configuration notes
 
-| Provider | 路由前缀示例 | 认证 | 特殊配置 |
+| Provider | Example route prefix | Auth | Special configuration |
 |----------|--------------|------|----------|
-| openai | `openai/gpt-4o`（无前缀默认） | `Authorization: Bearer` | `apiBase` 覆盖可接 DeepSeek/Groq/Ollama/vLLM 等兼容端点 |
-| anthropic | `anthropic/claude-sonnet-4-6` | `x-api-key` | `max_tokens` 缺省自动补 4096 |
-| azure | `azure/<deployment-name>` | `api-key` 头 | **必须**设 `apiBase`（资源端点）；`apiVersion` 默认 2024-10-21 |
-| mistral | `mistral/mistral-large-latest` | `Authorization: Bearer` | 自动裁剪 `stream_options` |
-| gemini | `gemini/gemini-2.0-flash` | `x-goog-api-key` | 函数调用无 id，函数名兼作 ToolCall.id |
-| bedrock | `bedrock/us.anthropic.claude-...` | AWS 凭证链或 `apiKey="ak:sk[:token]"` | `region` 默认 us-east-1；图片仅支持 base64 data URI |
+| openai | `openai/gpt-4o` (default when no prefix) | `Authorization: Bearer` | `apiBase` override reaches OpenAI-compatible endpoints (DeepSeek / Groq / Ollama / vLLM, etc.) |
+| anthropic | `anthropic/claude-sonnet-4-6` | `x-api-key` | `max_tokens` defaults to 4096 when missing |
+| azure | `azure/<deployment-name>` | `api-key` header | `apiBase` (resource endpoint) is **required**; `apiVersion` defaults to 2024-10-21 |
+| mistral | `mistral/mistral-large-latest` | `Authorization: Bearer` | `stream_options` is stripped automatically |
+| gemini | `gemini/gemini-2.0-flash` | `x-goog-api-key` | Function calls have no id; the function name doubles as `ToolCall.id` |
+| bedrock | `bedrock/us.anthropic.claude-...` | AWS credential chain or `apiKey="ak:sk[:token]"` | `region` defaults to us-east-1; images must be supplied as base64 data URIs |
