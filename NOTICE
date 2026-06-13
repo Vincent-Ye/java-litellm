@@ -1,0 +1,26 @@
+java-litellm
+Copyright (c) 2026 Yonglun
+
+Licensed under the MIT License. See LICENSE for the full text.
+
+================================================================================
+Third-party components
+================================================================================
+
+This product includes data sourced from LiteLLM by BerriAI:
+
+  https://github.com/BerriAI/litellm
+  Copyright (c) BerriAI
+  Licensed under the MIT License.
+
+Specifically, the file
+  litellm-core/src/main/resources/model_prices_and_context_window.json
+is a snapshot of the model price and context window table maintained in
+the LiteLLM repository, used here under the terms of LiteLLM's MIT License.
+
+The Java implementations of the SDK, Router and Proxy in this repository
+are an independent re-implementation; no source code from LiteLLM was
+copied. The OpenAI-compatible REST endpoint shapes, `config.yaml` schema
+and management API conventions are interface designs that are
+intentionally aligned with LiteLLM's, but interface designs are not
+subject to copyright protection.

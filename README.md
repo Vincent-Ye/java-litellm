@@ -47,6 +47,10 @@ System.out.println(resp.firstText() + "  cost=$" + resp.costUsd());
 client.chatStream(req).forEach(chunk -> System.out.print(chunk.textDelta()));
 ```
 
+## License
+
+MIT — see [LICENSE](LICENSE). The bundled price table is sourced from [BerriAI/litellm](https://github.com/BerriAI/litellm) (also MIT); see [NOTICE](NOTICE) for attribution.
+
 ## 文档
 
 - [快速开始](docs/GETTING_STARTED.md) — SDK 与 Proxy 网关的上手示例
