@@ -49,6 +49,9 @@ client.chatStream(req).forEach(chunk -> System.out.print(chunk.textDelta()));
 
 ## 文档
 
+- [快速开始](docs/GETTING_STARTED.md) — SDK 与 Proxy 网关的上手示例
+- [迁移指南](docs/MIGRATION.md) — 从 LiteLLM (Python) 迁移 + 已知差异
+- [能力矩阵](docs/CAPABILITIES.md) — 六家供应商的能力与配置要点
 - [架构设计](docs/DESIGN.md) — 范围界定、技术选型、模块划分、核心抽象（SDK / Router / Proxy）、测试策略与风险
 - [开发路线图](docs/ROADMAP.md) — M0–M6 共约 21 周到 v1.0，每个里程碑含交付物与验收标准
 

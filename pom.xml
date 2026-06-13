@@ -11,6 +11,28 @@
 
   <name>java-litellm</name>
   <description>Java rewrite of LiteLLM's open-source parts: unified LLM SDK, Router and OpenAI-compatible Proxy</description>
+  <url>https://github.com/Vincent-Ye/java-litellm</url>
+
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/licenses/MIT</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <name>Yonglun</name>
+      <url>https://github.com/Vincent-Ye</url>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:https://github.com/Vincent-Ye/java-litellm.git</connection>
+    <developerConnection>scm:git:git@github.com:Vincent-Ye/java-litellm.git</developerConnection>
+    <url>https://github.com/Vincent-Ye/java-litellm</url>
+  </scm>
 
   <modules>
     <module>litellm-bom</module>
@@ -151,4 +173,51 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <!--
+      Release artifacts for Maven Central. Activate with: mvn -Prelease package
+      Actual deploy + GPG signing is wired here but needs Sonatype credentials and a signing key,
+      so it stays opt-in and is not part of CI.
+    -->
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <version>3.3.1</version>
+            <executions>
+              <execution>
+                <id>attach-sources</id>
+                <goals>
+                  <goal>jar-no-fork</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>3.11.2</version>
+            <configuration>
+              <!-- tolerate missing tags; we ship doc for the public surface, not lint-clean javadoc -->
+              <doclint>none</doclint>
+              <failOnError>false</failOnError>
+              <quiet>true</quiet>
+            </configuration>
+            <executions>
+              <execution>
+                <id>attach-javadocs</id>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
