@@ -79,7 +79,15 @@ public final class LiteLlm {
     }
 
     public ChatResponse chat(ChatRequest request) {
-        Route route = resolve(request.model());
+        return chat(request, null);
+    }
+
+    /**
+     * Like {@link #chat(ChatRequest)} but with an explicit per-call provider config, overriding the
+     * builder-level configuration. Used by the router to apply per-deployment credentials.
+     */
+    public ChatResponse chat(ChatRequest request, ProviderConfig configOverride) {
+        Route route = resolve(request.model(), configOverride);
         ChatRequest bare = request.toBuilder().model(route.id.model()).build();
         CallContext ctx = CallContext.create(route.id.provider(), request);
         fireCallbacks(cb -> cb.onRequest(ctx));
@@ -101,7 +109,12 @@ public final class LiteLlm {
 
     /** Streams via callback. Streaming calls are not retried once chunks may have been delivered. */
     public void chatStream(ChatRequest request, StreamHandler handler) {
-        Route route = resolve(request.model());
+        chatStream(request, null, handler);
+    }
+
+    /** Streaming variant of {@link #chat(ChatRequest, ProviderConfig)}. */
+    public void chatStream(ChatRequest request, ProviderConfig configOverride, StreamHandler handler) {
+        Route route = resolve(request.model(), configOverride);
         ChatRequest bare = request.toBuilder().model(route.id.model()).build();
         CallContext ctx = CallContext.create(route.id.provider(), request);
         fireCallbacks(cb -> cb.onRequest(ctx));
@@ -214,9 +227,14 @@ public final class LiteLlm {
     }
 
     private Route resolve(String model) {
+        return resolve(model, null);
+    }
+
+    private Route resolve(String model, ProviderConfig configOverride) {
         ModelId id = ModelId.parse(model);
         LlmProvider provider = registry.require(id.provider(), id.model());
-        ProviderConfig config = configs.getOrDefault(id.provider(), defaultConfig);
+        ProviderConfig config =
+                configOverride != null ? configOverride : configs.getOrDefault(id.provider(), defaultConfig);
         return new Route(id, provider, config);
     }
 

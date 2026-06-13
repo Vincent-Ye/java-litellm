@@ -2,7 +2,19 @@
 
 用 Java 重写 [LiteLLM](https://github.com/BerriAI/litellm) 的开源部分：统一 LLM SDK + Router + OpenAI 兼容 Proxy 网关。
 
-**当前阶段：M2 完成——六家 Tier-1 供应商全部落地：OpenAI（含兼容系）、Anthropic、Azure OpenAI、Mistral、Gemini、AWS Bedrock。详见[能力矩阵](docs/CAPABILITIES.md)。下一步：M3 Router。**
+**当前阶段：M3 Router 完成——四种负载均衡策略（simple-shuffle / least-busy / latency-based / usage-based）、跨部署重试、429 即时冷却、fallback 与 context-window fallback 链、总超时预算，1000 并发压测通过。供应商能力见[能力矩阵](docs/CAPABILITIES.md)。下一步：M4 Proxy MVP。**
+
+```java
+Router router = Router.builder()
+        .deployment(Deployment.builder().id("azure-eastus").modelGroup("gpt-4o")
+                .model("azure/my-gpt4o").config(azureCfg).build())
+        .deployment(Deployment.builder().id("openai-main").modelGroup("gpt-4o")
+                .model("openai/gpt-4o").config(openaiCfg).build())
+        .strategy(RoutingStrategy.latencyBased())
+        .fallback("gpt-4o", List.of("claude-sonnet"))
+        .build();
+ChatResponse resp = router.chat(req); // 自动负载均衡 + 故障转移
+```
 
 ```java
 LiteLlm client = LiteLlm.builder()
