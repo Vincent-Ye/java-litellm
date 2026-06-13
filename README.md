@@ -2,7 +2,7 @@
 
 用 Java 重写 [LiteLLM](https://github.com/BerriAI/litellm) 的开源部分：统一 LLM SDK + Router + OpenAI 兼容 Proxy 网关。
 
-**当前阶段：M5 全部完成 + M6 进行中——加入 Redis 分布式后端：缓存（`SETEX`）、限流（Lua 原子滑动窗口）、Router 状态（冷却 + 时延/TPM/RPM 窗口）全部支持 Redis，`config.yaml` 设 `redis_url` 即切换、多副本部署计数共享；本机无 Docker，Testcontainers 集成测试由 CI 验证。叠加：缓存/Key+团队限流/Prometheus/团队用户层级/动态模型/`/spend` 报表/getting-started + 迁移文档/Maven 发布 profile。下一步：M6 收尾（安全审查、实际 Maven Central 发布需用户的 Sonatype 凭证）。**
+**当前阶段：M0–M6 全部完成（待你的 Sonatype 凭证后即可发布到 Maven Central）。** 安全审查无 HIGH/MEDIUM 发现；Maven 发布全套就绪（groupId `io.github.vincentye`、release profile 含 GPG 签名 + Central Publishing 插件、release workflow 一键发布）。流程见 [发布指南](docs/RELEASING.md)。
 
 ```bash
 # 启动网关（需 Docker）
@@ -54,6 +54,7 @@ client.chatStream(req).forEach(chunk -> System.out.print(chunk.textDelta()));
 - [能力矩阵](docs/CAPABILITIES.md) — 六家供应商的能力与配置要点
 - [架构设计](docs/DESIGN.md) — 范围界定、技术选型、模块划分、核心抽象（SDK / Router / Proxy）、测试策略与风险
 - [开发路线图](docs/ROADMAP.md) — M0–M6 共约 21 周到 v1.0，每个里程碑含交付物与验收标准
+- [发布指南](docs/RELEASING.md) — Maven Central 发布的一次性准备 + 每次流程
 
 ## 一句话架构
 

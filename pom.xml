@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>dev.javalitellm</groupId>
+  <groupId>io.github.vincentye</groupId>
   <artifactId>litellm-parent</artifactId>
   <version>0.1.0-SNAPSHOT</version>
   <packaging>pom</packaging>
@@ -199,9 +199,12 @@
 
   <profiles>
     <!--
-      Release artifacts for Maven Central. Activate with: mvn -Prelease package
-      Actual deploy + GPG signing is wired here but needs Sonatype credentials and a signing key,
-      so it stays opt-in and is not part of CI.
+      Release profile for Maven Central. Used in three modes:
+        * `mvn -Prelease package`  — local smoke test: produces sources + javadoc jars
+        * `mvn -Prelease verify`   — full build + GPG sign every artifact (needs a key)
+        * `mvn -Prelease deploy`   — sign + upload to Central via central-publishing-maven-plugin
+                                     (needs a key + Sonatype Central token in settings.xml)
+      See RELEASING.md for the full runbook.
     -->
     <profile>
       <id>release</id>
@@ -238,6 +241,39 @@
                 </goals>
               </execution>
             </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>3.2.7</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+                <configuration>
+                  <!-- pinentry-mode=loopback works with non-interactive GPG_PASSPHRASE in CI -->
+                  <gpgArguments>
+                    <arg>--pinentry-mode</arg>
+                    <arg>loopback</arg>
+                  </gpgArguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.sonatype.central</groupId>
+            <artifactId>central-publishing-maven-plugin</artifactId>
+            <version>0.7.0</version>
+            <extensions>true</extensions>
+            <configuration>
+              <publishingServerId>central</publishingServerId>
+              <!-- automatic: validate + release in one step; switch to "user_managed" to inspect first -->
+              <autoPublish>true</autoPublish>
+              <waitUntil>published</waitUntil>
+            </configuration>
           </plugin>
         </plugins>
       </build>

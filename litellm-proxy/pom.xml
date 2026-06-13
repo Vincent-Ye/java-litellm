@@ -5,7 +5,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>dev.javalitellm</groupId>
+    <groupId>io.github.vincentye</groupId>
     <artifactId>litellm-parent</artifactId>
     <version>0.1.0-SNAPSHOT</version>
   </parent>
@@ -16,6 +16,8 @@
 
   <properties>
     <spring-boot.version>3.5.3</spring-boot.version>
+    <!-- Distributed as a Docker image, not a Maven Central artifact. -->
+    <maven.deploy.skip>true</maven.deploy.skip>
   </properties>
 
   <dependencyManagement>
@@ -32,46 +34,46 @@
 
   <dependencies>
     <dependency>
-      <groupId>dev.javalitellm</groupId>
+      <groupId>io.github.vincentye</groupId>
       <artifactId>litellm-router</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>dev.javalitellm</groupId>
+      <groupId>io.github.vincentye</groupId>
       <artifactId>litellm-cache</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>dev.javalitellm</groupId>
+      <groupId>io.github.vincentye</groupId>
       <artifactId>litellm-callbacks</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>dev.javalitellm</groupId>
+      <groupId>io.github.vincentye</groupId>
       <artifactId>provider-openai</artifactId>
       <version>${project.version}</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
-      <groupId>dev.javalitellm</groupId>
+      <groupId>io.github.vincentye</groupId>
       <artifactId>provider-anthropic</artifactId>
       <version>${project.version}</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
-      <groupId>dev.javalitellm</groupId>
+      <groupId>io.github.vincentye</groupId>
       <artifactId>provider-azure-openai</artifactId>
       <version>${project.version}</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
-      <groupId>dev.javalitellm</groupId>
+      <groupId>io.github.vincentye</groupId>
       <artifactId>provider-mistral</artifactId>
       <version>${project.version}</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
-      <groupId>dev.javalitellm</groupId>
+      <groupId>io.github.vincentye</groupId>
       <artifactId>provider-gemini</artifactId>
       <version>${project.version}</version>
       <scope>runtime</scope>

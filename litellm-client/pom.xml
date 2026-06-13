@@ -5,7 +5,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>dev.javalitellm</groupId>
+    <groupId>io.github.vincentye</groupId>
     <artifactId>litellm-parent</artifactId>
     <version>0.1.0-SNAPSHOT</version>
   </parent>
@@ -16,12 +16,12 @@
 
   <dependencies>
     <dependency>
-      <groupId>dev.javalitellm</groupId>
+      <groupId>io.github.vincentye</groupId>
       <artifactId>litellm-core</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>dev.javalitellm</groupId>
+      <groupId>io.github.vincentye</groupId>
       <artifactId>litellm-callbacks</artifactId>
       <version>${project.version}</version>
     </dependency>
@@ -32,37 +32,37 @@
     </dependency>
     <!-- ServiceLoader-based end-to-end and discovery tests need real providers on the test classpath -->
     <dependency>
-      <groupId>dev.javalitellm</groupId>
+      <groupId>io.github.vincentye</groupId>
       <artifactId>provider-openai</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>dev.javalitellm</groupId>
+      <groupId>io.github.vincentye</groupId>
       <artifactId>provider-anthropic</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>dev.javalitellm</groupId>
+      <groupId>io.github.vincentye</groupId>
       <artifactId>provider-azure-openai</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>dev.javalitellm</groupId>
+      <groupId>io.github.vincentye</groupId>
       <artifactId>provider-mistral</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>dev.javalitellm</groupId>
+      <groupId>io.github.vincentye</groupId>
       <artifactId>provider-gemini</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>dev.javalitellm</groupId>
+      <groupId>io.github.vincentye</groupId>
       <artifactId>provider-bedrock</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
