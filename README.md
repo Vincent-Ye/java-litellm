@@ -2,7 +2,7 @@
 
 用 Java 重写 [LiteLLM](https://github.com/BerriAI/litellm) 的开源部分：统一 LLM SDK + Router + OpenAI 兼容 Proxy 网关。
 
-**当前阶段：M0–M6 全部完成（待你的 Sonatype 凭证后即可发布到 Maven Central）。** 安全审查无 HIGH/MEDIUM 发现；Maven 发布全套就绪（groupId `io.github.vincentye`、release profile 含 GPG 签名 + Central Publishing 插件、release workflow 一键发布）。流程见 [发布指南](docs/RELEASING.md)。
+**当前阶段：M0–M6 全部完成（待你的 Sonatype 凭证后即可发布到 Maven Central）。** 安全审查无 HIGH/MEDIUM 发现；Maven 发布全套就绪（groupId `io.github.vincent-ye`、release profile 含 GPG 签名 + Central Publishing 插件、release workflow 一键发布）。流程见 [发布指南](docs/RELEASING.md)。
 
 ```bash
 # 启动网关（需 Docker）

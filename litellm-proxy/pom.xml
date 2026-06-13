@@ -5,7 +5,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>io.github.vincentye</groupId>
+    <groupId>io.github.vincent-ye</groupId>
     <artifactId>litellm-parent</artifactId>
     <version>0.1.0-SNAPSHOT</version>
   </parent>
@@ -34,46 +34,46 @@
 
   <dependencies>
     <dependency>
-      <groupId>io.github.vincentye</groupId>
+      <groupId>io.github.vincent-ye</groupId>
       <artifactId>litellm-router</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.github.vincentye</groupId>
+      <groupId>io.github.vincent-ye</groupId>
       <artifactId>litellm-cache</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.github.vincentye</groupId>
+      <groupId>io.github.vincent-ye</groupId>
       <artifactId>litellm-callbacks</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.github.vincentye</groupId>
+      <groupId>io.github.vincent-ye</groupId>
       <artifactId>provider-openai</artifactId>
       <version>${project.version}</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
-      <groupId>io.github.vincentye</groupId>
+      <groupId>io.github.vincent-ye</groupId>
       <artifactId>provider-anthropic</artifactId>
       <version>${project.version}</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
-      <groupId>io.github.vincentye</groupId>
+      <groupId>io.github.vincent-ye</groupId>
       <artifactId>provider-azure-openai</artifactId>
       <version>${project.version}</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
-      <groupId>io.github.vincentye</groupId>
+      <groupId>io.github.vincent-ye</groupId>
       <artifactId>provider-mistral</artifactId>
       <version>${project.version}</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
-      <groupId>io.github.vincentye</groupId>
+      <groupId>io.github.vincent-ye</groupId>
       <artifactId>provider-gemini</artifactId>
       <version>${project.version}</version>
       <scope>runtime</scope>

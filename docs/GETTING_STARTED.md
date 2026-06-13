@@ -10,18 +10,18 @@
 
 ```xml
 <dependency>
-  <groupId>io.github.vincentye</groupId>
+  <groupId>io.github.vincent-ye</groupId>
   <artifactId>litellm-client</artifactId>
   <version>0.1.0</version>
 </dependency>
 <!-- 按需引入供应商，classpath 上有哪个就支持哪个（ServiceLoader 自动发现） -->
 <dependency>
-  <groupId>io.github.vincentye</groupId>
+  <groupId>io.github.vincent-ye</groupId>
   <artifactId>provider-openai</artifactId>
   <version>0.1.0</version>
 </dependency>
 <dependency>
-  <groupId>io.github.vincentye</groupId>
+  <groupId>io.github.vincent-ye</groupId>
   <artifactId>provider-anthropic</artifactId>
   <version>0.1.0</version>
 </dependency>

@@ -6,11 +6,11 @@
 
 ### 1. 注册 Sonatype Central 账号
 
-1. 打开 https://central.sonatype.com，用 GitHub 账号登录（推荐——会自动验证你的 `io.github.vincentye` 命名空间）。
-2. 进入 [Namespaces](https://central.sonatype.com/account)：你应该能看到 `io.github.vincentye`（与 GitHub 用户名匹配，自动 verified）。
+1. 打开 https://central.sonatype.com，用 GitHub 账号登录（推荐——会自动验证你的 `io.github.vincent-ye` 命名空间）。
+2. 进入 [Namespaces](https://central.sonatype.com/account)：你应该能看到 `io.github.vincent-ye`（与 GitHub 用户名匹配，自动 verified）。
 3. 进入 [Settings → User Tokens](https://central.sonatype.com/account)，点 "Generate User Token"，保存得到的 **username** 和 **password**。
 
-> 如果显示的是 `io.github.vincent-ye` 而不是 `io.github.vincentye`，需要把 pom 里所有 `<groupId>io.github.vincentye</groupId>` 改为 `<groupId>io.github.vincent-ye</groupId>`（Maven 接受 groupId 里的连字符）。
+> Maven groupId 支持连字符（与 Java 包名规则不同），所以这里直接用 `io.github.vincent-ye` 是合法的。注意 Java 包名（`dev.javalitellm.*`）跟 groupId 不需要一致。
 
 ### 2. 生成 GPG 签名密钥
 
@@ -104,19 +104,19 @@ mvn -Prelease verify -Dgpg.passphrase=YOUR_GPG_PASSPHRASE
 
 `litellm-proxy` 模块 **不发** Maven Central（fat jar 不适合作为依赖；它走 Docker 镜像分发）。发布的库模块：
 
-- `io.github.vincentye:litellm-bom` — 版本对齐 BOM
-- `io.github.vincentye:litellm-core` — 统一类型 + 异常 + SPI
-- `io.github.vincentye:litellm-client` — SDK 门面
-- `io.github.vincentye:litellm-router` — 路由层
-- `io.github.vincentye:litellm-cache` — 缓存抽象
-- `io.github.vincentye:litellm-callbacks` — 回调抽象
-- `io.github.vincentye:provider-openai` / `provider-anthropic` / `provider-azure-openai` / `provider-mistral` / `provider-gemini` / `provider-bedrock` — 各供应商适配
+- `io.github.vincent-ye:litellm-bom` — 版本对齐 BOM
+- `io.github.vincent-ye:litellm-core` — 统一类型 + 异常 + SPI
+- `io.github.vincent-ye:litellm-client` — SDK 门面
+- `io.github.vincent-ye:litellm-router` — 路由层
+- `io.github.vincent-ye:litellm-cache` — 缓存抽象
+- `io.github.vincent-ye:litellm-callbacks` — 回调抽象
+- `io.github.vincent-ye:provider-openai` / `provider-anthropic` / `provider-azure-openai` / `provider-mistral` / `provider-gemini` / `provider-bedrock` — 各供应商适配
 
 ## 故障排查
 
 | 错误 | 原因 / 解决 |
 |------|------|
-| `Namespace not verified` | 1.2 步：Central Portal 上没看到 `io.github.vincentye`。GitHub 账号验证失败，看你的 GitHub 用户名大小写是否一致。 |
+| `Namespace not verified` | 1.2 步：Central Portal 上没看到 `io.github.vincent-ye`。GitHub 账号验证失败，看你的 GitHub 用户名大小写是否一致。 |
 | `Invalid signature` | 公钥没发到 keyserver，或者发了但还没传播——`gpg --keyserver keys.openpgp.org --send-keys` 后等几分钟。 |
 | `Version 0.x.x already exists` | Central 的版本是 immutable 的，不能覆盖。bump 版本重发。 |
 | `401 Unauthorized` | `CENTRAL_USERNAME/PASSWORD` 不对，或用了登录账号密码而不是 user token。 |
