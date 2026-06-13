@@ -141,6 +141,15 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
           <version>3.5.2</version>
+          <configuration>
+            <!-- Include integration tests (*IT.java) in the surefire run. Testcontainers-backed
+                 ones gate themselves on Docker (disabledWithoutDocker=true) so they skip when
+                 Docker isn't available — both locally and on any runner lacking Docker. -->
+            <includes>
+              <include>**/*Test.java</include>
+              <include>**/*IT.java</include>
+            </includes>
+          </configuration>
         </plugin>
       </plugins>
     </pluginManagement>
