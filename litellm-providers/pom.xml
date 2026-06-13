@@ -21,5 +21,6 @@
     <module>provider-azure-openai</module>
     <module>provider-mistral</module>
     <module>provider-gemini</module>
+    <module>provider-bedrock</module>
   </modules>
 </project>

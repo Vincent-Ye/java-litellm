@@ -30,10 +30,40 @@
       <artifactId>wiremock</artifactId>
       <scope>test</scope>
     </dependency>
-    <!-- ServiceLoader-based end-to-end tests need a real provider on the test classpath -->
+    <!-- ServiceLoader-based end-to-end and discovery tests need real providers on the test classpath -->
     <dependency>
       <groupId>dev.javalitellm</groupId>
       <artifactId>provider-openai</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>dev.javalitellm</groupId>
+      <artifactId>provider-anthropic</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>dev.javalitellm</groupId>
+      <artifactId>provider-azure-openai</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>dev.javalitellm</groupId>
+      <artifactId>provider-mistral</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>dev.javalitellm</groupId>
+      <artifactId>provider-gemini</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>dev.javalitellm</groupId>
+      <artifactId>provider-bedrock</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>

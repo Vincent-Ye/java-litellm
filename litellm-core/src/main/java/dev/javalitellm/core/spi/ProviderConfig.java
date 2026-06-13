@@ -9,7 +9,12 @@ import java.util.Map;
  * OpenAI-compatible providers (DeepSeek, Groq, Ollama, vLLM, ...) are reached through provider-openai.
  */
 public record ProviderConfig(
-        String apiKey, String apiBase, String apiVersion, Duration timeout, Map<String, String> extraHeaders) {
+        String apiKey,
+        String apiBase,
+        String apiVersion,
+        String region,
+        Duration timeout,
+        Map<String, String> extraHeaders) {
 
     public static final Duration DEFAULT_TIMEOUT = Duration.ofMinutes(10);
 
@@ -26,6 +31,7 @@ public record ProviderConfig(
         private String apiKey;
         private String apiBase;
         private String apiVersion;
+        private String region;
         private Duration timeout;
         private final Map<String, String> extraHeaders = new LinkedHashMap<>();
 
@@ -45,6 +51,12 @@ public record ProviderConfig(
             return this;
         }
 
+        /** Cloud region for region-scoped providers, e.g. AWS Bedrock's {@code us-east-1}. */
+        public Builder region(String region) {
+            this.region = region;
+            return this;
+        }
+
         public Builder timeout(Duration timeout) {
             this.timeout = timeout;
             return this;
@@ -56,7 +68,7 @@ public record ProviderConfig(
         }
 
         public ProviderConfig build() {
-            return new ProviderConfig(apiKey, apiBase, apiVersion, timeout, extraHeaders);
+            return new ProviderConfig(apiKey, apiBase, apiVersion, region, timeout, extraHeaders);
         }
     }
 }

@@ -2,7 +2,7 @@
 
 用 Java 重写 [LiteLLM](https://github.com/BerriAI/litellm) 的开源部分：统一 LLM SDK + Router + OpenAI 兼容 Proxy 网关。
 
-**当前阶段：M1 完成（SDK 核心 + 流式回调埋点）；M2 进行中——已支持 OpenAI（含兼容系）、Anthropic、Azure OpenAI、Mistral、Gemini 五家供应商，Bedrock 在路上。**
+**当前阶段：M2 完成——六家 Tier-1 供应商全部落地：OpenAI（含兼容系）、Anthropic、Azure OpenAI、Mistral、Gemini、AWS Bedrock。详见[能力矩阵](docs/CAPABILITIES.md)。下一步：M3 Router。**
 
 ```java
 LiteLlm client = LiteLlm.builder()
@@ -31,7 +31,7 @@ client.chatStream(req).forEach(chunk -> System.out.print(chunk.textDelta()));
 ```
 litellm-core (统一 OpenAI 格式类型)
    ▲
-litellm-providers (OpenAI✓ / Anthropic✓ / Azure✓ / Mistral✓ / Gemini✓ / Bedrock…, SPI 可扩展)
+litellm-providers (OpenAI✓ / Anthropic✓ / Azure✓ / Mistral✓ / Gemini✓ / Bedrock✓, SPI 可扩展)
    ▲
 litellm-client (SDK 门面: 同步/异步/流式 + 重试 + 成本计算)
    ▲
