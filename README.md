@@ -2,7 +2,7 @@
 
 用 Java 重写 [LiteLLM](https://github.com/BerriAI/litellm) 的开源部分：统一 LLM SDK + Router + OpenAI 兼容 Proxy 网关。
 
-**当前阶段：M5（第一批）完成——在 M4 网关基础上新增：精确缓存（Caffeine，`config.yaml` 的 `litellm_settings.cache` 开关）、Key 级 TPM/RPM 限流（滑动窗口）、Prometheus 指标（`/actuator/prometheus`，按 model/结果打标）、`/spend/logs`、`/spend/keys` 报表端点。下一步：M5 第二批（Redis 分布式限流/缓存、团队/用户层级）。**
+**当前阶段：M5（第二批）完成——新增团队/用户层级：`teams`/`users` 表、虚拟 Key 归属团队/用户、级联预算（Key 超额→Team 超额均拒绝）、级联限流（Key→Team 共享 TPM/RPM）、记账级联累加到 team/user，`/team/new|info|update|delete`、`/user/new|info` 管理端点。叠加第一批的缓存/Key 限流/Prometheus/`/spend` 报表。下一步：M5 收尾（Redis 分布式限流/缓存、动态模型热更新）后进入 M6 发布加固。**
 
 ```bash
 # 启动网关（需 Docker）

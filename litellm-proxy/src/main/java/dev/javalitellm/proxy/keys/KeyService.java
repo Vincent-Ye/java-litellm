@@ -38,21 +38,25 @@ public class KeyService {
             BigDecimal maxBudget,
             Duration validFor,
             Integer tpmLimit,
-            Integer rpmLimit) {
+            Integer rpmLimit,
+            String teamId,
+            String userId) {
         byte[] random = new byte[24];
         RANDOM.nextBytes(random);
         String token = "sk-" + Base64.getUrlEncoder().withoutPadding().encodeToString(random);
         Instant expiresAt = validFor == null ? null : Instant.now().plus(validFor);
         jdbc.update(
                 "INSERT INTO virtual_keys (token_hash, key_alias, models, max_budget, expires_at, tpm_limit,"
-                        + " rpm_limit) VALUES (?,?,?,?,?,?,?)",
+                        + " rpm_limit, team_id, user_id) VALUES (?,?,?,?,?,?,?,?,?)",
                 hash(token),
                 alias,
                 models == null || models.isEmpty() ? null : String.join(",", models),
                 maxBudget,
                 expiresAt == null ? null : Timestamp.from(expiresAt),
                 tpmLimit,
-                rpmLimit);
+                rpmLimit,
+                teamId,
+                userId);
         return token;
     }
 
@@ -62,8 +66,8 @@ public class KeyService {
 
     public Optional<VirtualKey> findByHash(String tokenHash) {
         List<VirtualKey> rows = jdbc.query(
-                "SELECT token_hash, key_alias, models, max_budget, spend, expires_at, blocked, tpm_limit, rpm_limit"
-                        + " FROM virtual_keys WHERE token_hash = ?",
+                "SELECT token_hash, key_alias, models, max_budget, spend, expires_at, blocked, tpm_limit, rpm_limit,"
+                        + " team_id, user_id FROM virtual_keys WHERE token_hash = ?",
                 (rs, i) -> new VirtualKey(
                         rs.getString("token_hash"),
                         rs.getString("key_alias"),
@@ -75,7 +79,9 @@ public class KeyService {
                                 : rs.getTimestamp("expires_at").toInstant(),
                         rs.getBoolean("blocked"),
                         rs.getObject("tpm_limit", Integer.class),
-                        rs.getObject("rpm_limit", Integer.class)),
+                        rs.getObject("rpm_limit", Integer.class),
+                        rs.getString("team_id"),
+                        rs.getString("user_id")),
                 tokenHash);
         return rows.stream().findFirst();
     }

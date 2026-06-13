@@ -314,6 +314,93 @@ class ProxyIntegrationTest {
         assertThat(byKey.getStatusCode().value()).isEqualTo(200);
     }
 
+    private String createTeam(String body) throws IOException {
+        ResponseEntity<String> response =
+                rest.postForEntity("/team/new", new HttpEntity<>(body, headers(MASTER_KEY)), String.class);
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        return mapper.readTree(response.getBody()).path("team_id").asText();
+    }
+
+    @Test
+    void teamManagementIsMasterOnlyAndCascadesSpend() throws IOException {
+        String key = generateKey("{}");
+        ResponseEntity<String> denied =
+                rest.postForEntity("/team/new", new HttpEntity<>("{}", headers(key)), String.class);
+        assertThat(denied.getStatusCode().value()).isEqualTo(403);
+
+        String teamId = createTeam("{\"team_alias\":\"acme\",\"max_budget\":100.0}");
+        String teamKey = generateKey("{\"key_alias\":\"acme-key\",\"team_id\":\"" + teamId + "\"}");
+
+        rest.postForEntity(
+                "/v1/chat/completions",
+                new HttpEntity<>(
+                        "{\"model\":\"gpt-4o\",\"messages\":[{\"role\":\"user\",\"content\":\"team spend probe\"}]}",
+                        headers(teamKey)),
+                String.class);
+
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
+            BigDecimal teamSpend =
+                    jdbc.queryForObject("SELECT spend FROM teams WHERE team_id = ?", BigDecimal.class, teamId);
+            assertThat(teamSpend).isGreaterThan(BigDecimal.ZERO);
+        });
+    }
+
+    @Test
+    void teamBudgetBlocksAcrossKeys() throws IOException {
+        String teamId = createTeam("{\"team_alias\":\"frugal\",\"max_budget\":0.0000001}");
+        jdbc.update("UPDATE teams SET spend = 5.0 WHERE team_id = ?", teamId);
+        String teamKey = generateKey("{\"team_id\":\"" + teamId + "\"}");
+
+        ResponseEntity<String> response = rest.postForEntity(
+                "/v1/chat/completions",
+                new HttpEntity<>(
+                        "{\"model\":\"gpt-4o\",\"messages\":[{\"role\":\"user\",\"content\":\"over team budget\"}]}",
+                        headers(teamKey)),
+                String.class);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(429);
+        assertThat(response.getBody()).contains("team");
+    }
+
+    @Test
+    void teamRpmLimitSharedAcrossKeys() throws IOException {
+        String teamId = createTeam("{\"team_alias\":\"throttled\",\"rpm_limit\":1}");
+        String keyA = generateKey("{\"team_id\":\"" + teamId + "\"}");
+        String keyB = generateKey("{\"team_id\":\"" + teamId + "\"}");
+
+        ResponseEntity<String> first = rest.postForEntity(
+                "/v1/chat/completions",
+                new HttpEntity<>(
+                        "{\"model\":\"gpt-4o\",\"messages\":[{\"role\":\"user\",\"content\":\"team rpm one\"}]}",
+                        headers(keyA)),
+                String.class);
+        ResponseEntity<String> second = rest.postForEntity(
+                "/v1/chat/completions",
+                new HttpEntity<>(
+                        "{\"model\":\"gpt-4o\",\"messages\":[{\"role\":\"user\",\"content\":\"team rpm two\"}]}",
+                        headers(keyB)),
+                String.class);
+
+        assertThat(first.getStatusCode().value()).isEqualTo(200);
+        assertThat(second.getStatusCode().value()).isEqualTo(429);
+        assertThat(second.getBody()).contains("team");
+    }
+
+    @Test
+    void userCreationAndInfo() throws IOException {
+        ResponseEntity<String> created = rest.postForEntity(
+                "/user/new",
+                new HttpEntity<>("{\"user_alias\":\"alice\",\"max_budget\":50.0}", headers(MASTER_KEY)),
+                String.class);
+        assertThat(created.getStatusCode().value()).isEqualTo(200);
+        String userId = mapper.readTree(created.getBody()).path("user_id").asText();
+        assertThat(userId).startsWith("user-");
+
+        ResponseEntity<String> info = rest.postForEntity(
+                "/user/info", new HttpEntity<>("{\"user_id\":\"" + userId + "\"}", headers(MASTER_KEY)), String.class);
+        assertThat(mapper.readTree(info.getBody()).path("user_alias").asText()).isEqualTo("alice");
+    }
+
     @Test
     void streamsServerSentEvents() {
         // more specific stub (body match) wins over the JSON one for streaming requests

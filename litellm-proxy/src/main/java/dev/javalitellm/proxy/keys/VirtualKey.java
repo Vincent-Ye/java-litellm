@@ -14,7 +14,9 @@ public record VirtualKey(
         Instant expiresAt,
         boolean blocked,
         Integer tpmLimit,
-        Integer rpmLimit) {
+        Integer rpmLimit,
+        String teamId,
+        String userId) {
 
     public boolean allowsModel(String modelGroup) {
         return models.isEmpty() || models.contains(modelGroup);

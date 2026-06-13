@@ -30,10 +30,17 @@ public class AuthFilter extends OncePerRequestFilter {
         this.keys = keys;
     }
 
+    private static final java.util.List<String> ADMIN_PREFIXES =
+            java.util.List.of("/key/", "/spend/", "/team/", "/user/");
+
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return !(path.startsWith("/v1/") || path.startsWith("/key/") || path.startsWith("/spend/"));
+        return !(path.startsWith("/v1/") || isAdminPath(path));
+    }
+
+    private static boolean isAdminPath(String path) {
+        return ADMIN_PREFIXES.stream().anyMatch(path::startsWith);
     }
 
     @Override
@@ -51,8 +58,7 @@ public class AuthFilter extends OncePerRequestFilter {
             chain.doFilter(request, response);
             return;
         }
-        String path = request.getRequestURI();
-        if (path.startsWith("/key/") || path.startsWith("/spend/")) {
+        if (isAdminPath(request.getRequestURI())) {
             reject(response, 403, "admin endpoints require the master key");
             return;
         }

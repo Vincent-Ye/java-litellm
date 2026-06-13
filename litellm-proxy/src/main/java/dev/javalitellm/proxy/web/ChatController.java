@@ -22,6 +22,8 @@ import dev.javalitellm.proxy.keys.VirtualKey;
 import dev.javalitellm.proxy.metrics.ProxyMetrics;
 import dev.javalitellm.proxy.ratelimit.RateLimiter;
 import dev.javalitellm.proxy.spend.SpendService;
+import dev.javalitellm.proxy.teams.Team;
+import dev.javalitellm.proxy.teams.TeamService;
 import dev.javalitellm.router.Deployment;
 import dev.javalitellm.router.Router;
 import jakarta.servlet.http.HttpServletRequest;
@@ -50,6 +52,7 @@ public class ChatController {
     private final ProxyCache cache;
     private final RateLimiter rateLimiter;
     private final ProxyMetrics metrics;
+    private final TeamService teams;
 
     public ChatController(
             Router router,
@@ -59,7 +62,8 @@ public class ChatController {
             ObjectMapper mapper,
             ProxyCache cache,
             RateLimiter rateLimiter,
-            ProxyMetrics metrics) {
+            ProxyMetrics metrics,
+            TeamService teams) {
         this.router = router;
         this.client = client;
         this.codec = codec;
@@ -68,6 +72,7 @@ public class ChatController {
         this.cache = cache;
         this.rateLimiter = rateLimiter;
         this.metrics = metrics;
+        this.teams = teams;
     }
 
     @PostMapping(value = "/v1/chat/completions", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -76,7 +81,7 @@ public class ChatController {
         ChatRequest chatRequest = codec.parseChatRequest(body);
         String group = chatRequest.model();
         VirtualKey key = authorize(request, group);
-        enforceRateLimits(key, group);
+        enforceLimits(key, group);
 
         if (!codec.isStream(body)) {
             chatJson(chatRequest, group, key, response);
@@ -90,8 +95,8 @@ public class ChatController {
         router.chatStream(chatRequest, new StreamHandler() {
             @Override
             public void onChunk(ChatChunk chunk) {
-                if (chunk.usage() != null && key != null) {
-                    rateLimiter.recordTokens(key.tokenHash(), chunk.usage().totalTokens());
+                if (chunk.usage() != null) {
+                    recordTokenUsage(key, chunk.usage().totalTokens());
                 }
                 writeEvent(writer, codec.toWireChunk(chunk).toString());
             }
@@ -135,8 +140,8 @@ public class ChatController {
         }
         metrics.recordRequest(group, "ok", sinceNanos(startNanos));
         metrics.recordUsage(group, chatResponse);
-        if (key != null && chatResponse.usage() != null) {
-            rateLimiter.recordTokens(key.tokenHash(), chatResponse.usage().totalTokens());
+        if (chatResponse.usage() != null) {
+            recordTokenUsage(key, chatResponse.usage().totalTokens());
         }
         recordSpend(key, group, chatResponse);
         if (cacheKey != null) {
@@ -146,17 +151,45 @@ public class ChatController {
         mapper.writeValue(response.getWriter(), codec.toWireResponse(chatResponse));
     }
 
-    private void enforceRateLimits(VirtualKey key, String group) {
+    /** Enforces team budget/blocking and the key→team rate-limit cascade. Master key bypasses all. */
+    private void enforceLimits(VirtualKey key, String group) {
         if (key == null) {
-            return; // master key is not rate limited
+            return;
         }
+        Team team = key.teamId() == null ? null : teams.find(key.teamId()).orElse(null);
+        if (team != null) {
+            if (team.blocked()) {
+                throw new PermissionDeniedException("team '" + team.teamId() + "' is blocked", null, group);
+            }
+            if (team.overBudget()) {
+                throw new RateLimitException("team '" + team.teamId() + "' has exceeded its budget", null, group);
+            }
+        }
+
         if (!rateLimiter.withinTokenLimit(key.tokenHash(), key.tpmLimit())) {
             metrics.recordRateLimited(group, "tpm");
             throw new RateLimitException("key exceeded its TPM limit of " + key.tpmLimit(), null, group);
         }
+        if (team != null && !rateLimiter.withinTokenLimit("team:" + team.teamId(), team.tpmLimit())) {
+            metrics.recordRateLimited(group, "team_tpm");
+            throw new RateLimitException("team exceeded its TPM limit of " + team.tpmLimit(), null, group);
+        }
         if (!rateLimiter.tryAcquireRequest(key.tokenHash(), key.rpmLimit())) {
             metrics.recordRateLimited(group, "rpm");
             throw new RateLimitException("key exceeded its RPM limit of " + key.rpmLimit(), null, group);
+        }
+        if (team != null && !rateLimiter.tryAcquireRequest("team:" + team.teamId(), team.rpmLimit())) {
+            metrics.recordRateLimited(group, "team_rpm");
+            throw new RateLimitException("team exceeded its RPM limit of " + team.rpmLimit(), null, group);
+        }
+    }
+
+    private void recordTokenUsage(VirtualKey key, int totalTokens) {
+        if (key != null) {
+            rateLimiter.recordTokens(key.tokenHash(), totalTokens);
+            if (key.teamId() != null) {
+                rateLimiter.recordTokens("team:" + key.teamId(), totalTokens);
+            }
         }
     }
 
@@ -235,7 +268,7 @@ public class ChatController {
 
     private void recordSpend(VirtualKey key, String group, ChatResponse response) {
         if (key != null) {
-            spend.record(key.tokenHash(), group, response);
+            spend.record(key, group, response);
         }
     }
 

@@ -45,7 +45,9 @@ public class KeyController {
                 maxBudget,
                 validFor,
                 req.hasNonNull("tpm_limit") ? req.get("tpm_limit").asInt() : null,
-                req.hasNonNull("rpm_limit") ? req.get("rpm_limit").asInt() : null);
+                req.hasNonNull("rpm_limit") ? req.get("rpm_limit").asInt() : null,
+                req.path("team_id").asText(null),
+                req.path("user_id").asText(null));
 
         ObjectNode response = mapper.createObjectNode();
         response.put("key", token);
@@ -112,6 +114,8 @@ public class KeyController {
         node.put("blocked", vk.blocked());
         node.put("tpm_limit", vk.tpmLimit());
         node.put("rpm_limit", vk.rpmLimit());
+        node.put("team_id", vk.teamId());
+        node.put("user_id", vk.userId());
         return node;
     }
 
